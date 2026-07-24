@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Catalog · 产品库 — RobotHub</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<script src="/js/app.js"></script>
+
+<div class="container" style="padding-top:32px">
+  <div class="section-head"><div><h2 data-i="nav_catalog"></h2><p id="catSub"></p></div></div>
+  <div class="cat-hero" id="catHero" style="display:none"></div>
+  <div class="catalog">
+    <aside class="filters">
+      <h4 style="margin-bottom:4px" data-i="filters"></h4>
+      <div id="filterBody"></div>
+      <button class="reset" onclick="resetFilters()" data-i="reset"></button>
+    </aside>
+    <main class="catalog-main">
+      <div class="toolbar">
+        <div class="count"><b id="cnt">0</b> <span data-i="results"></span></div>
+        <div>
+          <span data-i="sort_by" style="font-size:13.5px;color:var(--muted);margin-right:6px"></span>
+          <select id="sort" onchange="state.sort=this.value;state.page=1;load()">
+            <option value="featured" data-i="sort_featured"></option>
+            <option value="year" data-i="sort_year"></option>
+            <option value="payload" data-i="sort_payload"></option>
+            <option value="price" data-i="sort_price"></option>
+            <option value="views" data-i="sort_views"></option>
+          <option value="name" data-i="sort_name"></option>
+          </select>
+        </div>
+      </div>
+      <div class="robot-grid" id="grid"></div>
+      <div class="pager" id="pager"></div>
+    </main>
+  </div>
+</div>
+
+<script>
+const params=new URLSearchParams(location.search);
+const state={ category:params.get('category')||'', brand:params.get('brand')||'', country:params.get('country')||'',
+  autonomy:params.get('autonomy')||'', q:params.get('q')||'', featured:params.get('featured')||'',
+  sort:params.get('sort')||'featured', page:1, limit:24 };
+
+function buildFilters(){
+  const s=META.stats;
+  const grp=(title,key,opts)=>`<div class="filter-group"><h4 data-i="${title}"></h4>
+    <div class="filter-opt ${!state[key]?'on':''}" onclick="setF('${key}','')"><span data-i="all"></span></div>
+    ${opts.map(o=>`<div class="filter-opt ${state[key]===o.id?'on':''}" onclick="setF('${key}','${o.id}')"><span>${o.label}</span><span class="n">${o.n??''}</span></div>`).join('')}</div>`;
+  const cats=META.categories.map(c=>({id:c.id,label:LANG==='zh'?c.zh:c.en,n:s.catCounts[c.id]||0}));
+  const autos=META.autonomyLevels.map(a=>({id:a.id,label:LANG==='zh'?a.zh:a.en}));
+  const countries=Object.entries(META.countries).filter(([k])=>s.countryCounts[k]).sort((a,b)=>(s.countryCounts[b[0]]||0)-(s.countryCounts[a[0]]||0)).map(([k,v])=>({id:k,label:(v.flag+' '+(LANG==='zh'?v.zh:v.en)),n:s.countryCounts[k]}));
+  document.getElementById('filterBody').innerHTML=grp('f_category','category',cats)+grp('f_autonomy','autonomy',autos)+grp('f_country','country',countries);
+  applyI18n();
+}
+function setF(k,v){ state[k]=v; state.page=1; buildFilters(); load(); }
+function resetFilters(){ Object.assign(state,{category:'',brand:'',country:'',autonomy:'',q:'',featured:'',page:1}); buildFilters(); load(); }
+
+async function load(){
+  const qs=new URLSearchParams();
+  ['category','brand','country','autonomy','q','featured','sort','page','limit'].forEach(k=>{ if(state[k]) qs.set(k,state[k]); });
+  const grid=document.getElementById('grid');
+  grid.innerHTML=Array(8).fill('<div class="skeleton"></div>').join('');
+  const data=await api('/api/robots?'+qs.toString());
+  document.getElementById('cnt').textContent=data.total;
+  document.getElementById('catSub').textContent=(state.brand?state.brand+' · ':'')+(state.q?('“'+state.q+'”'):'');
+  const ch=document.getElementById('catHero');
+  if(state.category){ const c=META.categories.find(x=>x.id===state.category);
+    ch.className='cat-hero cat-'+state.category; ch.style.display='flex';
+    ch.innerHTML=`<div class="ico">${c.icon}</div><div><h2>${LANG==='zh'?c.zh:c.en}</h2><p>${LANG==='zh'?c.desc_zh:c.desc_en}</p></div><div class="cnt">${data.total} ${LANG==='zh'?'款':'models'}</div>`;
+  } else { ch.style.display='none'; }
+  if(!data.items.length){ grid.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="e">🔍</div><h3 data-i="empty_title"></h3><p data-i="empty_sub"></p></div>`; applyI18n(); document.getElementById('pager').innerHTML=''; return; }
+  grid.innerHTML=data.items.map(robotCard).join('');
+  applyI18n();
+  // pager
+  const pg=document.getElementById('pager'); const P=data.pages, cur=data.page;
+  if(P<=1){ pg.innerHTML=''; return; }
+  let h=`<button ${cur===1?'disabled':''} onclick="goPage(${cur-1})">‹</button>`;
+  for(let i=1;i<=P;i++){ if(i===1||i===P||Math.abs(i-cur)<=2){ h+=`<button class="${i===cur?'on':''}" onclick="goPage(${i})">${i}</button>`; } else if(Math.abs(i-cur)===3){ h+=`<button disabled>…</button>`; } }
+  h+=`<button ${cur===P?'disabled':''} onclick="goPage(${cur+1})">›</button>`;
+  pg.innerHTML=h;
+}
+function goPage(p){ state.page=p; load(); window.scrollTo({top:0,behavior:'smooth'}); }
+
+async function init(){
+  renderChrome('catalog'); await loadMeta();
+  document.getElementById('sort').value=state.sort;
+  applyI18n(); renderTray(); buildFilters(); load();
+  document.addEventListener('langchange',()=>{ buildFilters(); load(); });
+}
+init();
+</script>
+</body>
+</html>

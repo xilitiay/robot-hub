@@ -1,0 +1,30 @@
+# Render.com Blueprint — one-click deploy for RobotHub
+# 用法: 在 Render 面板 "New" -> "Blueprint" -> 关联本仓库，Render 会自动按此文件创建服务。
+# Usage: Render Dashboard -> New -> Blueprint -> connect this repo. Render provisions the service automatically.
+# 文档: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: robothub
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    # 平台会把 $PORT 注入给容器，server.js 已用 process.env.PORT
+    # Render injects $PORT; server.js reads process.env.PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # 自动生成强随机后台令牌，可在面板查看/修改
+      # auto-generated strong admin token (viewable/editable in dashboard)
+      - key: ADMIN_TOKEN
+        generateValue: true
+      # 数据库落在持久磁盘上，重启不丢数据
+      # DB lives on the persistent disk so data survives restarts
+      - key: DB_PATH
+        value: /data/robot-hub.db
+    # 持久磁盘：保存 SQLite 数据库（机器人目录 + 询价记录）
+    # Persistent disk: holds the SQLite DB (catalog + RFQ leads)
+    disk:
+      name: robothub-data
+      mountPath: /data
+      sizeGB: 1

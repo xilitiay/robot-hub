@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RobotHub — 全球机器人产品库 | The Global Robot Directory</title>
+<meta name="description" content="全球最全面的机器人产品数据库，收录工业、协作、人形、移动、医疗与服务机器人。">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<script src="/js/app.js"></script>
+
+<section class="hero">
+  <div class="container">
+    <h1 data-i="hero_title"></h1>
+    <p data-i="hero_sub"></p>
+    <div class="search-wrap">
+      <form class="hero-search" onsubmit="event.preventDefault();go()">
+        <input id="q" data-ph="search_ph" type="text" autocomplete="off">
+        <button class="btn btn-primary" type="submit" data-i="search"></button>
+      </form>
+      <div class="sug-box" id="heroSug" style="display:none"></div>
+    </div>
+    <div class="hero-stats" id="heroStats"></div>
+  </div>
+  <div class="art" aria-hidden="true">
+    <svg viewBox="0 0 200 210" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="60" y="46" width="80" height="68" rx="16" stroke="#fff" stroke-width="4" opacity=".92"/>
+      <circle cx="85" cy="76" r="9" fill="#fff" opacity=".95"/>
+      <circle cx="115" cy="76" r="9" fill="#fff" opacity=".95"/>
+      <rect x="78" y="96" width="44" height="6" rx="3" fill="#fff" opacity=".65"/>
+      <line x1="100" y1="46" x2="100" y2="26" stroke="#fff" stroke-width="4"/>
+      <circle cx="100" cy="20" r="6" fill="#fff" opacity=".95"/>
+      <rect x="48" y="124" width="104" height="64" rx="18" stroke="#fff" stroke-width="4" opacity=".92"/>
+      <line x1="60" y1="156" x2="38" y2="178" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+      <line x1="140" y1="156" x2="162" y2="178" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="100" cy="156" r="8" fill="#fff" opacity=".9"/>
+    </svg>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div><h2 data-i="cats_title"></h2><p data-i="cats_sub"></p></div>
+      <a class="more" href="/catalog.html" data-i="view_all"></a>
+    </div>
+    <div class="cat-grid" id="catGrid"></div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div class="container">
+    <div class="section-head">
+      <div><h2 data-i="featured_title"></h2><p data-i="featured_sub"></p></div>
+      <a class="more" href="/catalog.html?featured=1" data-i="view_all"></a>
+    </div>
+    <div class="robot-grid" id="featGrid"></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div><h2 data-i="latest_title"></h2><p data-i="latest_sub"></p></div>
+      <a class="more" href="/catalog.html?sort=year" data-i="view_all"></a>
+    </div>
+    <div class="robot-grid" id="latestGrid"></div>
+  </div>
+</section>
+
+<script>
+function go(){ const q=document.getElementById('q').value.trim(); location.href='/catalog.html'+(q?('?q='+encodeURIComponent(q)):''); }
+async function init(){
+  renderChrome('home');
+  await loadMeta();
+  applyI18n(); renderTray();
+  setupSearch(document.getElementById('q'), document.getElementById('heroSug'));
+  const s=META.stats;
+  document.getElementById('heroStats').innerHTML=[['stat_robots',s.total],['stat_brands',s.brandCount],['stat_cats',s.categoryCount],['stat_countries',Object.keys(s.countryCounts).length]].map(([k,v])=>`<div class="hero-stat"><b>${v}</b><span>${t(k)}</span></div>`).join('');
+  document.getElementById('catGrid').innerHTML=META.categories.map(c=>`
+    <a class="cat-card cat-${c.id}" href="/catalog.html?category=${c.id}">
+      <div class="ico">${c.icon}</div>
+      <h3>${LANG==='zh'?c.zh:c.en}</h3>
+      <div class="cnt">${s.catCounts[c.id]||0} ${LANG==='zh'?'款':'models'}</div>
+      <div class="d">${LANG==='zh'?c.desc_zh:c.desc_en}</div>
+    </a>`).join('');
+  const feat=await api('/api/robots?featured=1&limit=8');
+  document.getElementById('featGrid').innerHTML=feat.items.map(robotCard).join('');
+  const latest=await api('/api/robots?sort=year&limit=8');
+  document.getElementById('latestGrid').innerHTML=latest.items.map(robotCard).join('');
+  document.addEventListener('langchange',()=>init2());
+}
+function init2(){
+  const s=META.stats;
+  document.getElementById('heroStats').innerHTML=[['stat_robots',s.total],['stat_brands',s.brandCount],['stat_cats',s.categoryCount],['stat_countries',Object.keys(s.countryCounts).length]].map(([k,v])=>`<div class="hero-stat"><b>${v}</b><span>${t(k)}</span></div>`).join('');
+  document.getElementById('catGrid').innerHTML=META.categories.map(c=>`<a class="cat-card cat-${c.id}" href="/catalog.html?category=${c.id}"><div class="ico">${c.icon}</div><h3>${LANG==='zh'?c.zh:c.en}</h3><div class="cnt">${s.catCounts[c.id]||0} ${LANG==='zh'?'款':'models'}</div><div class="d">${LANG==='zh'?c.desc_zh:c.desc_en}</div></a>`).join('');
+  api('/api/robots?featured=1&limit=8').then(f=>document.getElementById('featGrid').innerHTML=f.items.map(robotCard).join(''));
+  api('/api/robots?sort=year&limit=8').then(l=>document.getElementById('latestGrid').innerHTML=l.items.map(robotCard).join(''));
+}
+init();
+</script>
+</body>
+</html>

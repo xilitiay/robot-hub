@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin · 管理台 — RobotHub</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<script src="/js/app.js"></script>
+
+<div id="gate" class="container" style="padding-top:90px;max-width:460px">
+  <div class="cat-card" style="--c:var(--primary);text-align:center">
+    <div class="ico" style="margin:0 auto 14px">🔐</div>
+    <h3 data-i="admin_title"></h3>
+    <p class="d" data-i="admin_login" style="margin-top:6px"></p>
+    <div class="field" style="text-align:left;margin-top:18px">
+      <label data-i="token"></label>
+      <input id="tk" type="password" placeholder="robothub-admin-2026" onkeydown="if(event.key==='Enter')unlock()">
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px" onclick="unlock()" data-i="login"></button>
+    <p id="gerr" style="color:var(--red);font-size:13px;margin-top:10px;display:none">Invalid token.</p>
+  </div>
+</div>
+
+<div id="console" class="container hide" style="padding-top:32px">
+  <div class="section-head"><div><h2 data-i="admin_title"></h2><p data-i="admin_sub"></p></div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <span id="who" style="font-size:13px;color:var(--muted)"></span>
+      <button class="btn btn-ghost" onclick="logout()">Exit</button>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <button id="tabRobots" class="on" onclick="switchTab('robots')" data-i="admin_robots"></button>
+    <button id="tabRfq" onclick="switchTab('rfq')" data-i="admin_rfq"></button>
+  </div>
+
+  <div id="panelRobots">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+      <button class="btn btn-primary" onclick="openForm()" data-i="add_robot"></button>
+    </div>
+    <div style="overflow:auto">
+      <table class="admin-table" id="robotTable"><thead><tr>
+        <th>Brand</th><th>Model</th><th>Category</th><th data-i="spec_country">Origin</th><th data-i="spec_payload">Payload</th><th data-i="spec_year">Year</th><th></th>
+      </tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <div id="panelRfq" class="hide">
+    <div style="overflow:auto">
+      <table class="admin-table" id="rfqTable"><thead><tr>
+        <th>#</th><th>Robot</th><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Message</th><th data-i="spec_year">Date</th>
+      </tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- Robot form modal -->
+<div class="modal-mask" id="formMask">
+  <div class="modal">
+    <h3 id="formTitle" data-i="add_robot"></h3>
+    <p class="mdesc" id="formDesc"></p>
+    <div class="field"><label>Brand</label><input id="f_brand" placeholder="FANUC"></div>
+    <div class="field"><label>Brand (中文)</label><input id="f_brandZh" placeholder="发那科"></div>
+    <div class="field"><label>Model</label><input id="f_model" placeholder="LR Mate 200iD"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="field"><label>Category</label><select id="f_category"></select></div>
+      <div class="field"><label>Autonomy</label><select id="f_autonomy"></select></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="field"><label>Country</label><select id="f_country"></select></div>
+      <div class="field"><label>Year</label><input id="f_year" type="number" placeholder="2025"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div class="field"><label data-i="spec_payload">Payload(kg)</label><input id="f_payload" type="number" step="0.1"></div>
+      <div class="field"><label data-i="spec_reach">Reach(mm)</label><input id="f_reach" type="number"></div>
+      <div class="field"><label data-i="spec_dof">DOF</label><input id="f_dof" type="number"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div class="field"><label data-i="spec_weight">Weight(kg)</label><input id="f_weight" type="number" step="0.1"></div>
+      <div class="field"><label>Price(USD)</label><input id="f_price" type="number"></div>
+      <div class="field"><label>Price text</label><input id="f_priceText" placeholder="$30,000"></div>
+    </div>
+    <div class="field"><label>Description (EN)</label><textarea id="f_descEn" rows="2" placeholder="Short English description"></textarea></div>
+    <div class="field"><label>Description (中文)</label><textarea id="f_descZh" rows="2" placeholder="中文简述"></textarea></div>
+    <div class="field"><label>Applications (comma separated)</label><input id="f_apps" placeholder="welding, assembly, pick & place"></div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:10px"><input id="f_featured" type="checkbox"> Featured</label>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeForm()" data-i="cancel"></button>
+      <button class="btn btn-primary" onclick="saveRobot()" data-i="submit"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TOKEN_KEY='admin_token';
+let TOKEN=localStorage.getItem(TOKEN_KEY)||'';
+let editingId=null;
+
+function adminFetch(path,opts={}){
+  return fetch(path,{...opts,headers:{'Content-Type':'application/json','X-Admin-Token':TOKEN,...(opts.headers||{})}}).then(r=>r.json());
+}
+function unlock(){
+  const v=document.getElementById('tk').value.trim();
+  TOKEN=v||TOKEN;
+  if(!TOKEN){return;}
+  // verify token by hitting rfq endpoint
+  fetch('/api/admin/rfq',{headers:{'X-Admin-Token':TOKEN}}).then(r=>{
+    if(r.status===401){ document.getElementById('gerr').style.display='block'; TOKEN=''; return; }
+    localStorage.setItem(TOKEN_KEY,TOKEN);
+    document.getElementById('gate').classList.add('hide');
+    document.getElementById('console').classList.remove('hide');
+    document.getElementById('who').textContent='🟢 '+TOKEN.slice(0,8)+'…';
+    boot();
+  });
+}
+function logout(){ TOKEN=''; localStorage.removeItem(TOKEN_KEY); location.reload(); }
+
+async function boot(){
+  renderChrome('admin'); await loadMeta();
+  fillSelects(); applyI18n(); renderTray();
+  loadRobots();
+}
+function fillSelects(){
+  const C=META.categories,A=META.autonomyLevels,CO=Object.entries(META.countries);
+  document.getElementById('f_category').innerHTML=C.map(c=>`<option value="${c.id}">${LANG==='zh'?c.zh:c.en}</option>`).join('');
+  document.getElementById('f_autonomy').innerHTML=A.map(a=>`<option value="${a.id}">${LANG==='zh'?a.zh:a.en}</option>`).join('');
+  document.getElementById('f_country').innerHTML=CO.map(([k,v])=>`<option value="${k}">${v.flag} ${LANG==='zh'?v.zh:v.en}</option>`).join('');
+}
+function switchTab(t){
+  document.getElementById('tabRobots').classList.toggle('on',t==='robots');
+  document.getElementById('tabRfq').classList.toggle('on',t==='rfq');
+  document.getElementById('panelRobots').classList.toggle('hide',t!=='robots');
+  document.getElementById('panelRfq').classList.toggle('hide',t!=='rfq');
+  if(t==='robots') loadRobots(); else loadRfq();
+}
+
+async function loadRobots(){
+  const d=await api('/api/robots?limit=200');
+  const catName=id=>{const c=(META.categories||[]).find(x=>x.id===id);return c?(LANG==='zh'?c.zh:c.en):id;};
+  const tb=document.querySelector('#robotTable tbody');
+  tb.innerHTML=d.items.map(r=>`<tr>
+    <td><b>${r.brand}</b>${r.brandZh?'<br><span style="color:var(--muted);font-size:12px">'+r.brandZh+'</span>':''}</td>
+    <td>${r.model}</td>
+    <td><span class="tag cat" style="--c:var(--primary)">${catName(r.category)}</span></td>
+    <td>${r.countryInfo?r.countryInfo.flag+' '+(LANG==='zh'?r.countryInfo.zh:r.countryInfo.en):r.country}</td>
+    <td>${r.payload!=null?r.payload+'kg':'—'}</td>
+    <td>${r.year||'—'}</td>
+    <td><span class="op" onclick="openForm('${r.id}')" data-i="edit"></span><span class="op del" onclick="delRobot('${r.id}')" data-i="del"></span></td>
+  </tr>`).join('');
+  applyI18n();
+}
+async function loadRfq(){
+  const list=await adminFetch('/api/admin/rfq');
+  const tb=document.querySelector('#rfqTable tbody');
+  tb.innerHTML=list.map(r=>`<tr>
+    <td>${r.id}</td><td>${r.robotId||'—'}</td><td>${r.name||''}</td><td>${r.company||''}</td>
+    <td>${r.email||''}</td><td>${r.phone||''}</td><td style="max-width:220px">${r.message||''}</td>
+    <td style="white-space:nowrap">${(r.createdAt||'').slice(0,10)}</td>
+  </tr>`).join('');
+}
+
+function openForm(id){
+  editingId=id||null;
+  document.getElementById('formTitle').textContent=id?t('edit'):t('add_robot');
+  document.getElementById('formDesc').textContent=id?'':'';
+  const ids=['brand','brandZh','model','category','autonomy','country','year','payload','reach','dof','weight','price','priceText','descEn','descZh','apps','featured'];
+  ids.forEach(k=>{const el=document.getElementById('f_'+k);if(el){if(el.type==='checkbox')el.checked=false;else el.value='';}});
+  if(id){
+    api('/api/robots/'+id).then(d=>{const r=d.robot;
+      ['brand','brandZh','model','category','autonomy','country','year','payload','reach','dof','weight','price','priceText','descEn','descZh'].forEach(k=>{const el=document.getElementById('f_'+k);if(el&&r[k]!=null)el.value=r[k];});
+      document.getElementById('f_featured').checked=!!r.featured;
+      document.getElementById('f_apps').value=(r.apps||[]).join(', ');
+    });
+  }
+  document.getElementById('formMask').classList.add('show');
+}
+function closeForm(){ document.getElementById('formMask').classList.remove('show'); }
+async function saveRobot(){
+  const get=(k)=>{const el=document.getElementById('f_'+k);return el?el.value.trim():'';};
+  const num=(k)=>{const v=document.getElementById('f_'+k).value;return v===''||v==null?null:Number(v);};
+  const body={
+    brand:get('brand'), brandZh:get('brandZh'), model:get('model'),
+    category:get('category'), autonomy:get('autonomy'), country:get('country'),
+    year:num('year'), payload:num('payload'), reach:num('reach'), dof:num('dof'),
+    weight:num('weight'), price:num('price'), priceText:get('priceText'),
+    descEn:get('descEn'), descZh:get('descZh'),
+    apps:get('apps').split(',').map(s=>s.trim()).filter(Boolean),
+    featured:document.getElementById('f_featured').checked
+  };
+  if(!body.brand||!body.model){ alert('Brand & Model required'); return; }
+  let res;
+  if(editingId) res=await adminFetch('/api/admin/robots/'+editingId,{method:'PUT',body:JSON.stringify(body)});
+  else res=await adminFetch('/api/admin/robots',{method:'POST',body:JSON.stringify(body)});
+  if(res.ok){ closeForm(); loadRobots(); }
+  else alert('Error: '+(res.error||'unknown'));
+}
+async function delRobot(id){
+  if(!confirm('Delete this robot?')) return;
+  const res=await adminFetch('/api/admin/robots/'+id,{method:'DELETE'});
+  if(res.ok) loadRobots(); else alert('Delete failed');
+}
+
+// init gate
+document.addEventListener('langchange',()=>{ if(!document.getElementById('console').classList.contains('hide')){ applyI18n(); loadRobots(); } });
+if(TOKEN){ unlock(); } else { renderChrome('admin'); }
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+services:
+  robothub:
+    build: .
+    container_name: robothub
+    ports:
+      - "3100:3000"
+    environment:
+      - PORT=3000
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-robothub-admin-2026}
+    volumes:
+      - robothub-db:/app/db
+    restart: unless-stopped
+
+volumes:
+  robothub-db:

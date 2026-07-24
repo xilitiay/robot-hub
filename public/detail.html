@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Robot Detail — RobotHub</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<script src="/js/app.js"></script>
+
+<div class="container detail" id="root"></div>
+
+<!-- RFQ modal -->
+<div class="modal-mask" id="rfqMask">
+  <div class="modal">
+    <h3 data-i="rfq_title"></h3>
+    <p class="mdesc" data-i="rfq_sub"></p>
+    <form onsubmit="event.preventDefault();submitRfq()">
+      <div class="field"><label data-i="rfq_name"></label><input id="f_name" required></div>
+      <div class="field"><label data-i="rfq_company"></label><input id="f_company"></div>
+      <div class="field"><label data-i="rfq_email"></label><input id="f_email" type="email" required></div>
+      <div class="field"><label data-i="rfq_phone"></label><input id="f_phone"></div>
+      <div class="field"><label data-i="rfq_msg"></label><textarea id="f_msg" rows="3"></textarea></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeRfq()" data-i="cancel"></button>
+        <button type="submit" class="btn btn-primary" data-i="submit"></button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const id=new URLSearchParams(location.search).get('id');
+let ROBOT=null;
+function spec(label,val){ return val!=null&&val!==''?`<tr><td>${label}</td><td>${val}</td></tr>`:''; }
+
+async function render(){
+  const d=await api('/api/robots/'+id);
+  if(d.error){ document.getElementById('root').innerHTML='<div class="empty"><div class="e">🤖</div><h3 data-i="empty_title"></h3></div>'; applyI18n(); return; }
+  ROBOT=d.robot; const r=d.robot;
+  const cat=META.categories.find(c=>c.id===r.category), auto=META.autonomyLevels.find(a=>a.id===r.autonomy);
+  const cc=r.countryInfo;
+  document.title=`${r.brand} ${r.model} — RobotHub`;
+  document.getElementById('root').innerHTML=`
+    <div class="breadcrumb"><a href="/">RobotHub</a> / <a href="/catalog.html?category=${r.category}">${LANG==='zh'?cat.zh:cat.en}</a> / ${r.model}</div>
+    <div class="detail-top cat-${r.category}">
+      <div class="detail-media"><span class="emoji">${EMOJI[r.category]}</span>${r.featured?`<span class="feat" style="top:16px;left:16px">★ ${LANG==='zh'?'精选':'FEATURED'}</span>`:''}</div>
+      <div class="detail-info">
+        <div class="tags"><span class="tag cat">${LANG==='zh'?cat.zh:cat.en}</span><span class="tag auto">${LANG==='zh'?auto.zh:auto.en}</span></div>
+        <div class="sub">${LANG==='zh'?(r.brandZh||r.brand):r.brand} ${cc?('· '+cc.flag+' '+(LANG==='zh'?cc.zh:cc.en)):''}</div>
+        <h1>${r.model}</h1>
+        <p class="desc">${LANG==='zh'?r.descZh:r.descEn}</p>
+        <table class="spec-table">
+          ${spec(t('spec_brand'),LANG==='zh'?(r.brandZh||r.brand):r.brand)}
+          ${spec(t('spec_category'),LANG==='zh'?cat.zh:cat.en)}
+          ${spec(t('spec_autonomy'),LANG==='zh'?auto.zh:auto.en)}
+          ${spec(t('spec_payload'),r.payload!=null?r.payload+' kg':'')}
+          ${spec(t('spec_reach'),r.reach!=null?r.reach+' mm':'')}
+          ${spec(t('spec_dof'),r.dof)}
+          ${spec(t('spec_weight'),r.weight!=null?r.weight+' kg':'')}
+          ${spec(t('spec_year'),r.year)}
+          ${spec(t('spec_country'),cc?(cc.flag+' '+(LANG==='zh'?cc.zh:cc.en)):'')}
+          ${spec(t('spec_price'),r.priceText)}
+        </table>
+        ${r.apps&&r.apps.length?`<div class="app-chips">${r.apps.map(a=>`<span class="app-chip">${a}</span>`).join('')}</div>`:''}
+        <div class="detail-actions">
+          <button class="btn btn-primary" onclick="openRfq()" data-i="request_quote"></button>
+          <button class="btn btn-ghost" onclick="toggleCmp('${r.id}');alert(LANG==='zh'?'已加入对比':'Added to compare')" data-i="compare"></button>
+          <a class="btn btn-ghost" href="/catalog.html?category=${r.category}" data-i="back"></a>
+        </div>
+      </div>
+    </div>
+    <div class="section" style="padding:44px 0 0">
+      <div class="section-head"><h2 data-i="related"></h2></div>
+      <div class="robot-grid">${d.related.map(robotCard).join('')}</div>
+    </div>`;
+  applyI18n();
+}
+function openRfq(){ document.getElementById('rfqMask').classList.add('show'); }
+function closeRfq(){ document.getElementById('rfqMask').classList.remove('show'); }
+async function submitRfq(){
+  const body={ robotId:id, name:val('f_name'), company:val('f_company'), email:val('f_email'), phone:val('f_phone'), message:val('f_msg') };
+  const res=await fetch('/api/rfq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
+  if(res.ok){ closeRfq(); alert(t('rfq_ok')); ['f_name','f_company','f_email','f_phone','f_msg'].forEach(i=>document.getElementById(i).value=''); }
+}
+const val=(i)=>document.getElementById(i).value;
+async function init(){ renderChrome('catalog'); await loadMeta(); applyI18n(); renderTray(); render(); document.addEventListener('langchange',render); }
+init();
+</script>
+</body>
+</html>

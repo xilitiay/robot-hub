@@ -1,0 +1,11 @@
+{
+  "name": "robot-hub",
+  "version": "1.0.0",
+  "description": "RobotHub - The Global Robot Product Database (全球机器人产品库). A high-fidelity replica of the world's largest robot directory. Zero-dependency full-stack (node:http + node:sqlite).",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --experimental-sqlite server.js"
+  },
+  "engines": { "node": ">=22.5.0" },
+  "license": "MIT"
+}
