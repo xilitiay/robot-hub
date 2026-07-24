@@ -73,7 +73,7 @@ async function load(){
     ch.className='cat-hero cat-'+state.category; ch.style.display='flex';
     ch.innerHTML=`<div class="ico">${c.icon}</div><div><h2>${LANG==='zh'?c.zh:c.en}</h2><p>${LANG==='zh'?c.desc_zh:c.desc_en}</p></div><div class="cnt">${data.total} ${LANG==='zh'?'款':'models'}</div>`;
   } else { ch.style.display='none'; }
-  if(!data.items.length){ grid.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="e">🔍</div><h3 data-i="empty_title"></h3><p data-i="empty_sub"></p></div>`; applyI18n(); document.getElementById('pager').innerHTML=''; return; }
+  if(!data.items.length){ grid.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="e">🔍</div><h3 data-i="empty_title"></h3><p data-i="empty_sub"></p><button class="btn btn-primary" style="margin-top:18px" onclick="resetFilters()" data-i="reset"></button></div>`; applyI18n(); document.getElementById('pager').innerHTML=''; return; }
   grid.innerHTML=data.items.map(robotCard).join('');
   applyI18n();
   // pager

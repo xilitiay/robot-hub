@@ -40,13 +40,13 @@ const meta = {
 // brands aggregation (mirrors apiBrands)
 const byBrand = {};
 robotsOut.forEach(r => {
-  if (!byBrand[r.brand]) byBrand[r.brand] = { brand: r.brand, brandZh: r.brandZh, country: r.country, count: 0, categories: new Set() };
-  byBrand[r.brand].count++;
-  byBrand[r.brand].categories.add(r.category);
+  if (!byBrand[r.brand]) byBrand[r.brand] = { brand: r.brand, brandZh: r.brandZh, country: r.country, c: 0, cats: new Set() };
+  byBrand[r.brand].c++;
+  byBrand[r.brand].cats.add(r.category);
 });
 const brandsOut = Object.values(byBrand)
-  .map(b => ({ ...b, categories: [...b.categories] }))
-  .sort((a, b) => b.count - a.count);
+  .map(b => ({ ...b, cats: [...b.cats] }))
+  .sort((a, b) => b.c - a.c);
 
 // write bundle
 const bundle = `window.ROBOTHUB_STATIC=true;\n`

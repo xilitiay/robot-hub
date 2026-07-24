@@ -78,7 +78,8 @@ async function init(){
   applyI18n(); renderTray();
   setupSearch(document.getElementById('q'), document.getElementById('heroSug'));
   const s=META.stats;
-  document.getElementById('heroStats').innerHTML=[['stat_robots',s.total],['stat_brands',s.brandCount],['stat_cats',s.categoryCount],['stat_countries',Object.keys(s.countryCounts).length]].map(([k,v])=>`<div class="hero-stat"><b>${v}</b><span>${t(k)}</span></div>`).join('');
+  document.getElementById('heroStats').innerHTML=[['stat_robots',s.total],['stat_brands',s.brandCount],['stat_cats',s.categoryCount],['stat_countries',Object.keys(s.countryCounts).length]].map(([k,v])=>`<div class="hero-stat"><b data-count="${v}">0</b><span>${t(k)}</span></div>`).join('');
+  document.querySelectorAll('#heroStats b[data-count]').forEach(e=>animateCount(e,+e.dataset.count));
   document.getElementById('catGrid').innerHTML=META.categories.map(c=>`
     <a class="cat-card cat-${c.id}" href="/catalog.html?category=${c.id}">
       <div class="ico">${c.icon}</div>
@@ -94,7 +95,8 @@ async function init(){
 }
 function init2(){
   const s=META.stats;
-  document.getElementById('heroStats').innerHTML=[['stat_robots',s.total],['stat_brands',s.brandCount],['stat_cats',s.categoryCount],['stat_countries',Object.keys(s.countryCounts).length]].map(([k,v])=>`<div class="hero-stat"><b>${v}</b><span>${t(k)}</span></div>`).join('');
+  document.getElementById('heroStats').innerHTML=[['stat_robots',s.total],['stat_brands',s.brandCount],['stat_cats',s.categoryCount],['stat_countries',Object.keys(s.countryCounts).length]].map(([k,v])=>`<div class="hero-stat"><b data-count="${v}">0</b><span>${t(k)}</span></div>`).join('');
+  document.querySelectorAll('#heroStats b[data-count]').forEach(e=>animateCount(e,+e.dataset.count));
   document.getElementById('catGrid').innerHTML=META.categories.map(c=>`<a class="cat-card cat-${c.id}" href="/catalog.html?category=${c.id}"><div class="ico">${c.icon}</div><h3>${LANG==='zh'?c.zh:c.en}</h3><div class="cnt">${s.catCounts[c.id]||0} ${LANG==='zh'?'款':'models'}</div><div class="d">${LANG==='zh'?c.desc_zh:c.desc_en}</div></a>`).join('');
   api('/api/robots?featured=1&limit=8').then(f=>document.getElementById('featGrid').innerHTML=f.items.map(robotCard).join(''));
   api('/api/robots?sort=year&limit=8').then(l=>document.getElementById('latestGrid').innerHTML=l.items.map(robotCard).join(''));

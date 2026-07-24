@@ -35,6 +35,17 @@
 const id=new URLSearchParams(location.search).get('id');
 let ROBOT=null;
 function spec(label,val){ return val!=null&&val!==''?`<tr><td>${label}</td><td>${val}</td></tr>`:''; }
+function specBars(r){
+  const defs=[
+    {l:t('spec_payload'),v:r.payload,max:500,u:'kg'},
+    {l:t('spec_reach'),v:r.reach,max:3500,u:'mm'},
+    {l:t('spec_dof'),v:r.dof,max:7,u:''},
+    {l:t('spec_weight'),v:r.weight,max:2000,u:'kg'},
+    {l:t('spec_year'),v:r.year,max:2026,u:''},
+  ].filter(d=>d.v!=null&&!isNaN(d.v));
+  if(!defs.length) return '';
+  return `<div class="spec-bars"><h4>${t('spec_quickview')}</h4>${defs.map(d=>{const p=Math.max(5,Math.min(100,Math.round(d.v/d.max*100)));return `<div class="sbar"><div class="lbl"><span>${d.l}</span><b>${d.v}${d.u}</b></div><div class="track"><div class="fill" data-w="${p}"></div></div></div>`;}).join('')}</div>`;
+}
 
 async function render(){
   const d=await api('/api/robots/'+id);
@@ -46,7 +57,7 @@ async function render(){
   document.getElementById('root').innerHTML=`
     <div class="breadcrumb"><a href="/">RobotHub</a> / <a href="/catalog.html?category=${r.category}">${LANG==='zh'?cat.zh:cat.en}</a> / ${r.model}</div>
     <div class="detail-top cat-${r.category}">
-      <div class="detail-media"><span class="emoji">${EMOJI[r.category]}</span>${r.featured?`<span class="feat" style="top:16px;left:16px">★ ${LANG==='zh'?'精选':'FEATURED'}</span>`:''}</div>
+      <div class="detail-media"><div class="grid-deco"></div><span class="wm">${brandInitials(r.brand)}</span><span class="emoji">${EMOJI[r.category]}</span>${r.featured?`<span class="feat" style="top:16px;left:16px">★ ${LANG==='zh'?'精选':'FEATURED'}</span>`:''}</div>
       <div class="detail-info">
         <div class="tags"><span class="tag cat">${LANG==='zh'?cat.zh:cat.en}</span><span class="tag auto">${LANG==='zh'?auto.zh:auto.en}</span></div>
         <div class="sub">${LANG==='zh'?(r.brandZh||r.brand):r.brand} ${cc?('· '+cc.flag+' '+(LANG==='zh'?cc.zh:cc.en)):''}</div>
@@ -64,10 +75,11 @@ async function render(){
           ${spec(t('spec_country'),cc?(cc.flag+' '+(LANG==='zh'?cc.zh:cc.en)):'')}
           ${spec(t('spec_price'),r.priceText)}
         </table>
+        ${specBars(r)}
         ${r.apps&&r.apps.length?`<div class="app-chips">${r.apps.map(a=>`<span class="app-chip">${a}</span>`).join('')}</div>`:''}
         <div class="detail-actions">
           <button class="btn btn-primary" onclick="openRfq()" data-i="request_quote"></button>
-          <button class="btn btn-ghost" onclick="toggleCmp('${r.id}');alert(LANG==='zh'?'已加入对比':'Added to compare')" data-i="compare"></button>
+          <button class="btn btn-ghost" onclick="toggleCmp('${r.id}');toast(LANG==='zh'?'已加入对比':'Added to compare','ok')" data-i="compare"></button>
           <a class="btn btn-ghost" href="/catalog.html?category=${r.category}" data-i="back"></a>
         </div>
       </div>
@@ -77,6 +89,7 @@ async function render(){
       <div class="robot-grid">${d.related.map(robotCard).join('')}</div>
     </div>`;
   applyI18n();
+  setTimeout(()=>document.querySelectorAll('.spec-bars .fill').forEach(f=>f.style.width=f.dataset.w+'%'),80);
 }
 function openRfq(){ document.getElementById('rfqMask').classList.add('show'); }
 function closeRfq(){ document.getElementById('rfqMask').classList.remove('show'); }
@@ -84,7 +97,7 @@ async function submitRfq(){
   if(STATIC_MODE){ alert(LANG==='zh'?'演示模式：部署完整服务端后支持在线询价。':'Demo mode: deploy the full server to enable RFQ.'); return; }
   const body={ robotId:id, name:val('f_name'), company:val('f_company'), email:val('f_email'), phone:val('f_phone'), message:val('f_msg') };
   const res=await fetch('/api/rfq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
-  if(res.ok){ closeRfq(); alert(t('rfq_ok')); ['f_name','f_company','f_email','f_phone','f_msg'].forEach(i=>document.getElementById(i).value=''); }
+  if(res.ok){ closeRfq(); toast(t('rfq_ok'),'ok'); ['f_name','f_company','f_email','f_phone','f_msg'].forEach(i=>document.getElementById(i).value=''); }
 }
 const val=(i)=>document.getElementById(i).value;
 async function init(){ renderChrome('catalog'); await loadMeta(); applyI18n(); renderTray(); render(); document.addEventListener('langchange',render); }

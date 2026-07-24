@@ -193,6 +193,7 @@ function renderChrome(active){
   document.body.insertAdjacentHTML('afterbegin',header);
   document.body.insertAdjacentHTML('beforeend',foot);
   updateThemeBtn();
+  injectExtras();
 }
 function renderTray(){
   const ids=getCmp(), tray=document.getElementById('cmpTray'); if(!tray) return;
@@ -241,3 +242,30 @@ function robotCard(r){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{ document.documentElement.lang=LANG==='zh'?'zh-CN':'en'; });
+
+/* ---- Toast notifications ---- */
+function toast(msg, type){
+  let box=document.getElementById('toastBox');
+  if(!box){ box=document.createElement('div'); box.id='toastBox'; box.className='toast-box'; document.body.appendChild(box); }
+  const el=document.createElement('div'); el.className='toast '+(type||'');
+  const ic=type==='ok'?'✓':type==='err'?'!':'ℹ';
+  el.innerHTML='<span class="ti">'+ic+'</span><span>'+msg+'</span>';
+  box.appendChild(el);
+  setTimeout(()=>{ el.style.animation='toastOut .3s ease forwards'; setTimeout(()=>el.remove(),300); },2600);
+}
+
+/* ---- Count-up animation ---- */
+function animateCount(el, target, dur){
+  dur=dur||1100; const start=performance.now();
+  function step(now){ const p=Math.min(1,(now-start)/dur); const e=1-Math.pow(1-p,3); el.textContent=Math.round(target*e).toLocaleString(); if(p<1) requestAnimationFrame(step); else el.textContent=target.toLocaleString(); }
+  requestAnimationFrame(step);
+}
+
+/* ---- Chrome extras (back-to-top) ---- */
+function injectExtras(){
+  if(document.getElementById('toTop')) return;
+  const b=document.createElement('button'); b.id='toTop'; b.className='to-top'; b.innerHTML='&#8593;'; b.title='Back to top';
+  b.onclick=()=>window.scrollTo({top:0,behavior:'smooth'});
+  document.body.appendChild(b);
+  window.addEventListener('scroll',()=>{ b.classList.toggle('show', window.scrollY>400); },{passive:true});
+}
