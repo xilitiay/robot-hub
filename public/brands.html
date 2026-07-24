@@ -15,8 +15,13 @@
     <h2 data-i="brands_title"></h2>
     <p data-i="brands_sub"></p>
   </div>
-    <div style="min-width:260px">
-      <input id="bs" class="hero-search" style="padding:9px 14px;border:1px solid var(--line);border-radius:10px;font-size:14px;width:100%" data-ph="nav_brands" oninput="filterBrands(this.value)">
+    <div class="brand-tools">
+      <select id="bsort" class="sort-sel" onchange="renderBrands()">
+        <option value="name" data-i="sort_name"></option>
+        <option value="count" data-i="sort_models"></option>
+        <option value="country" data-i="sort_country"></option>
+      </select>
+      <input id="bs" class="hero-search" style="padding:9px 14px;border:1px solid var(--line);border-radius:10px;font-size:14px" data-ph="nav_brands" oninput="filterBrands(this.value)">
     </div>
   </div>
   <div class="az-index hide" id="azIndex"></div>
@@ -26,21 +31,34 @@
 
 <script>
 let ALL=[];
+let azObserver=null;
+// brand name → first letter bucket (A-Z or # for digits/symbols)
 function firstLetter(b){
   const n=(b.brand||'').trim();
   if(!n) return '#';
   const c=n[0].toUpperCase();
   return /[A-Z]/.test(c)?c:'#';
 }
+// deterministic hue from brand string → stable, distinct logo colors
+function brandHue(s){ let h=0; for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))%360; return h; }
+// trademark-safe logo placeholder: colored monogram tile, NOT the actual brand mark
 function brandCard(b){
   const name=LANG==='zh'?(b.brandZh||b.brand):b.brand;
   const sub=LANG==='zh'?b.brand:(b.brandZh||'');
   const flag=b.countryInfo?b.countryInfo.flag:'';
   const countryName=b.countryInfo?(LANG==='zh'?b.countryInfo.zh:b.countryInfo.en):'';
   const cats=(b.cats||[]).map(id=>{const c=(META.categories||[]).find(x=>x.id===id);return c?(LANG==='zh'?c.zh:c.en):id;});
+  const ini=brandInitials(b.brand);
+  const hue=brandHue(b.brand);
   return `<a class="brand-card" href="/catalog.html?brand=${encodeURIComponent(b.brand)}">
-    <div class="bt"><h3>${name}</h3><span class="badge">${b.c} <span data-i="models">${t('models')}</span></span></div>
-    ${sub?`<div class="zh">${sub}</div>`:''}
+    <div class="bhead">
+      <span class="blogo" style="--h:${hue}" aria-hidden="true">${ini}</span>
+      <div class="btxt">
+        <h3>${name}</h3>
+        ${sub?`<div class="zh">${sub}</div>`:''}
+      </div>
+      <span class="badge">${b.c} <span data-i="models">${t('models')}</span></span>
+    </div>
     <div class="meta"><span>${flag} ${countryName}</span><span>${cats.slice(0,2).join(' · ')}${cats.length>2?' +'+(cats.length-2):''}</span></div>
   </a>`;
 }
@@ -48,18 +66,39 @@ function goLetter(L){
   const el=document.getElementById('sec-'+L);
   if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
 }
+function highlightActive(L){
+  document.querySelectorAll('#azIndex .az').forEach(b=>b.classList.toggle('active', b.textContent===L));
+}
+// scroll-spy: highlight the letter currently in view
+function setupScrollSpy(){
+  if(azObserver) azObserver.disconnect();
+  azObserver=new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ highlightActive(e.target.id.replace('sec-','')); } });
+  },{rootMargin:'-90px 0px -62% 0px', threshold:0});
+  document.querySelectorAll('.brand-section').forEach(s=>azObserver.observe(s));
+}
 function renderAz(activeLetters){
   const az=document.getElementById('azIndex');
   const all='ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('');
   az.innerHTML=all.map(L=>`<button class="az ${activeLetters.includes(L)?'on':''}" ${activeLetters.includes(L)?`onclick="goLetter('${L}')"`:'disabled'}>${L}</button>`).join('');
 }
+function sortBrands(arr,mode){
+  const a=arr.slice();
+  if(mode==='count') a.sort((x,y)=>(y.c||0)-(x.c||0) || x.brand.localeCompare(y.brand));
+  else if(mode==='country') a.sort((x,y)=>(x.country||'').localeCompare(y.country||'') || x.brand.localeCompare(y.brand));
+  else a.sort((x,y)=>x.brand.localeCompare(y.brand));
+  return a;
+}
 function renderBrands(){
   const grid=document.getElementById('grid'), emp=document.getElementById('empty'), az=document.getElementById('azIndex');
   const v=(document.getElementById('bs').value||'').trim().toLowerCase();
+  const mode=document.getElementById('bsort').value||'name';
   const list=ALL.filter(b=>(b.brand+' '+(b.brandZh||'')+' '+b.country).toLowerCase().includes(v));
-  if(v){
+  if(azObserver){ azObserver.disconnect(); azObserver=null; }
+  document.querySelectorAll('#azIndex .az').forEach(b=>b.classList.remove('active'));
+  if(v || mode!=='name'){
     az.classList.add('hide');
-    grid.innerHTML=list.map(brandCard).join('');
+    grid.innerHTML=sortBrands(list,mode).map(brandCard).join('');
   } else {
     az.classList.remove('hide');
     const groups={};
@@ -70,6 +109,7 @@ function renderBrands(){
       <div class="brand-grid">${groups[L].map(brandCard).join('')}</div>
     </section>`).join('');
     renderAz(letters);
+    setupScrollSpy();
   }
   applyI18n();
   emp.classList.toggle('hide',list.length>0);
