@@ -65,8 +65,58 @@ const t = (k) => (I18N[LANG] && I18N[LANG][k]) || (I18N.en[k]) || k;
 const EMOJI = { industrial:'🦾', cobot:'🤝', amr:'🛞', humanoid:'🧍', quadruped:'🐕', medical:'🏥', service:'🛎️', consumer:'🏠', agricultural:'🌾', special:'🚁', logistics:'📦' };
 
 let META = null;
-async function loadMeta(){ if(META) return META; META = await fetch('/api/meta').then(r=>r.json()); return META; }
-const api = (path)=>fetch(path).then(r=>r.json());
+const STATIC_MODE = !!window.ROBOTHUB_STATIC;   // set by static-bundle.js in the static build
+async function loadMeta(){ if(META) return META; META = await api('/api/meta'); return META; }
+const api = (path)=> STATIC_MODE ? staticApi(path) : fetch(path).then(r=>r.json());
+
+/* ---- Static (pre-rendered) mode: serve from bundled data instead of /api ---- */
+function staticApi(path){
+  const u = new URL(path, location.href);
+  const q = Object.fromEntries(u.searchParams.entries());
+  const p = u.pathname;
+  if (p === '/api/meta') return Promise.resolve(window.ROBOTHUB_META || {});
+  const m = p.match(/^\/api\/robots\/(.+)$/);
+  if (m) {
+    const id = decodeURIComponent(m[1]);
+    const r = (window.ROBOTHUB_ROBOTS||[]).find(x => x.id === id);
+    if (!r) return Promise.resolve({ error: 'not found' });
+    const related = (window.ROBOTHUB_ROBOTS||[]).filter(x => x.category === r.category && x.id !== id).slice(0, 3);
+    return Promise.resolve({ robot: r, related });
+  }
+  if (p === '/api/robots') {
+    let arr = (window.ROBOTHUB_ROBOTS||[]).slice();
+    if (q.category) arr = arr.filter(r => r.category === q.category);
+    if (q.brand) arr = arr.filter(r => r.brand === q.brand);
+    if (q.country) arr = arr.filter(r => r.country === q.country);
+    if (q.autonomy) arr = arr.filter(r => r.autonomy === q.autonomy);
+    if (q.featured) arr = arr.filter(r => r.featured);
+    if (q.q) { const s = String(q.q).toLowerCase(); arr = arr.filter(r => (r.brand+' '+r.model+' '+(r.brandZh||'')+' '+(r.descEn||'')).toLowerCase().includes(s)); }
+    const total = arr.length;
+    const sort = q.sort || '';
+    arr.sort((a, b) => {
+      if (sort === 'payload') return (b.payload||0) - (a.payload||0);
+      if (sort === 'year') return (b.year||0) - (a.year||0);
+      if (sort === 'price') return (a.price||1e12) - (b.price||1e12);
+      if (sort === 'name') return (a.brand + a.model).localeCompare(b.brand + b.model);
+      if (sort === 'views') return (b.views||0) - (a.views||0);
+      if (!!b.featured !== !!a.featured) return (b.featured?1:0) - (a.featured?1:0);
+      return (b.year||0) - (a.year||0);
+    });
+    const page = parseInt(q.page || '1', 10);
+    const limit = parseInt(q.limit || '24', 10);
+    const start = (page - 1) * limit;
+    const items = arr.slice(start, start + limit);
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    return Promise.resolve({ items, total, page, totalPages });
+  }
+  if (p === '/api/brands') return Promise.resolve(window.ROBOTHUB_BRANDS || []);
+  if (p === '/api/compare') {
+    const ids = (q.ids || '').split(',').filter(Boolean);
+    const items = (window.ROBOTHUB_ROBOTS||[]).filter(r => ids.includes(r.id));
+    return Promise.resolve({ items });
+  }
+  return Promise.resolve({ error: 'unknown api' });
+}
 
 /* ---- Compare store ---- */
 const CMP_KEY='cmp_ids';
@@ -114,6 +164,7 @@ function setupSearch(input, box){
 
 /* ---- Header / Footer ---- */
 function renderChrome(active){
+  const adminLink = STATIC_MODE ? '' : `<a href="/admin.html" data-i="nav_admin" class="${active==='admin'?'active':''}"></a>`;
   const header=`<header class="site-header"><div class="container"><nav class="nav">
     <a class="logo" href="/"><span class="mark">🤖</span><span>Robot<b>Hub</b></span></a>
     <div class="nav-links">
@@ -121,7 +172,7 @@ function renderChrome(active){
       <a href="/catalog.html" data-i="nav_catalog" class="${active==='catalog'?'active':''}"></a>
       <a href="/brands.html" data-i="nav_brands" class="${active==='brands'?'active':''}"></a>
       <a href="/compare.html" data-i="nav_compare" class="${active==='compare'?'active':''}"></a>
-      <a href="/admin.html" data-i="nav_admin" class="${active==='admin'?'active':''}"></a>
+      ${adminLink}
     </div>
     <div class="nav-right">
       <button class="theme-toggle" onclick="toggleTheme()" title="Theme">🌙</button>

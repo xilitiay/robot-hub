@@ -76,6 +76,18 @@ docker compose up -d --build
 > 其它平台：Railway / Fly.io 直接吃本仓库的 `Dockerfile`；挂载持久卷并把 `DB_PATH` 指向它即可。
 > Other platforms: Railway / Fly.io run this repo's `Dockerfile` directly — mount a persistent volume and point `DB_PATH` at it.
 
+## 静态只读预览 Static Read-only Preview (CloudStudio / 任意静态托管)
+CloudStudio 等静态沙箱**无法运行 Node 服务**，本仓库提供「静态构建」：把全量数据预渲染进前端，浏览/筛选/搜索/对比/品牌索引全部可用；后台管理与在线询价（写操作）在演示模式下列为「部署完整版后可用」。
+
+```bash
+# 生成 dist/（含 static-bundle.js 数据 + 注入好的前端）
+node build_static.js
+# 把 dist/ 直接交给静态托管 / CloudStudio 部署即可
+```
+- `app.js` 通过 `window.ROBOTHUB_STATIC` 自动切换「静态模式」：用本地数据替代 `/api/*`，无需服务器。
+- `dist/admin.html` 不在静态构建内（写操作需服务端）。
+- 如需真正可写的云端，请用上方 Render 方案（Docker + 持久磁盘）。
+
 ## REST API
 | 方法 | 路径 | 说明 |
 |---|---|---|
