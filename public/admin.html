@@ -53,24 +53,43 @@
         <option value="payload" data-i="sort_payload"></option>
         <option value="name" data-i="sort_name"></option>
       </select>
+      <select id="fperpage" class="sort-sel" onchange="robotPage=1;applyRobotFilters()" title="Per page">
+        <option value="20">20</option>
+        <option value="50" selected>50</option>
+        <option value="100">100</option>
+        <option value="0" data-i="all"></option>
+      </select>
       <button class="btn btn-primary" onclick="openForm()" data-i="add_robot"></button>
     </div>
-    <div style="margin-bottom:10px;font-size:13px;color:var(--muted)"><span id="robotCount"></span></div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:13px;color:var(--muted)"><span id="robotCount"></span></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="exportRobots()" data-i="exp_robots"></button>
+        <button class="btn btn-ghost" onclick="exportBrands()" data-i="exp_brands"></button>
+      </div>
+    </div>
     <div style="overflow:auto">
       <table class="admin-table" id="robotTable"><thead><tr>
         <th>Brand</th><th>Model</th><th>Category</th><th data-i="spec_country">Origin</th><th data-i="spec_payload">Payload</th><th data-i="spec_year">Year</th><th></th>
       </tr></thead><tbody></tbody></table>
     </div>
+    <div id="robotPager" class="pager" style="display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px"></div>
   </div>
 
   <div id="panelRfq" class="hide">
     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px">
       <input id="rfqSearch" class="hero-search" style="flex:1;min-width:200px;padding:9px 14px;border:1px solid var(--line);border-radius:10px;font-size:14px" data-ph="search_rfq" oninput="applyRfqFilter()">
+      <select id="fstatus" class="sort-sel" onchange="applyRfqFilter()">
+        <option value="" data-i="all_status"></option>
+        <option value="pending" data-i="status_pending"></option>
+        <option value="done" data-i="status_done"></option>
+      </select>
+      <button class="btn btn-ghost" onclick="exportRfq()" data-i="exp_rfq"></button>
       <span id="rfqCount" style="font-size:13px;color:var(--muted)"></span>
     </div>
     <div style="overflow:auto">
       <table class="admin-table" id="rfqTable"><thead><tr>
-        <th>#</th><th>Robot</th><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Message</th><th data-i="spec_year">Date</th>
+        <th>#</th><th>Robot</th><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Message</th><th data-i="rfq_status">Status</th><th data-i="spec_year">Date</th>
       </tr></thead><tbody></tbody></table>
     </div>
   </div>
@@ -171,16 +190,17 @@ function switchTab(t){
 }
 
 let ROBOTS=[];   // 全量缓存，用于客户端即时筛选
+let robotPage=1; // 当前分页
 async function loadRobots(){
   const d=await api('/api/robots?limit=1000');
   ROBOTS=d.items||[];
+  robotPage=1;
   applyRobotFilters();
 }
-function applyRobotFilters(){
+function getFilteredRobots(){
   const q=(document.getElementById('fq').value||'').trim().toLowerCase();
   const cat=document.getElementById('fcat').value;
   const country=document.getElementById('fcountry').value;
-  const catName=id=>{const c=(META.categories||[]).find(x=>x.id===id);return c?(LANG==='zh'?c.zh:c.en):id;};
   const list=ROBOTS.filter(r=>{
     if(cat && r.category!==cat) return false;
     if(country && r.country!==country) return false;
@@ -193,8 +213,21 @@ function applyRobotFilters(){
     if(sort==='name') return (a.brand+a.model).localeCompare(b.brand+b.model);
     return (b.year||0)-(a.year||0);   // default: newest first
   });
+  return list;
+}
+function applyRobotFilters(){
+  const catName=id=>{const c=(META.categories||[]).find(x=>x.id===id);return c?(LANG==='zh'?c.zh:c.en):id;};
+  const list=getFilteredRobots();
+  // 分页
+  const pageSize=parseInt(document.getElementById('fperpage').value||'50',10);
+  const total=list.length;
+  const totalPages = pageSize>0 ? Math.max(1, Math.ceil(total/pageSize)) : 1;
+  if(robotPage>totalPages) robotPage=totalPages;
+  const start=(pageSize>0)?(robotPage-1)*pageSize:0;
+  const pageItems = pageSize>0 ? list.slice(start, start+pageSize) : list;
+
   const tb=document.querySelector('#robotTable tbody');
-  tb.innerHTML=list.map(r=>`<tr>
+  tb.innerHTML=pageItems.map(r=>`<tr>
     <td><b>${r.brand}</b>${r.brandZh?'<br><span style="color:var(--muted);font-size:12px">'+r.brandZh+'</span>':''}</td>
     <td>${r.model}</td>
     <td><span class="tag cat" style="--c:var(--primary)">${catName(r.category)}</span></td>
@@ -204,8 +237,18 @@ function applyRobotFilters(){
     <td><span class="op" onclick="openForm('${r.id}')" data-i="edit"></span><span class="op del" onclick="delRobot('${r.id}')" data-i="del"></span></td>
   </tr>`).join('');
   const cnt=document.getElementById('robotCount');
-  if(cnt) cnt.textContent = LANG==='zh' ? `共 ${list.length} 款（库内 ${ROBOTS.length}）` : `${list.length} of ${ROBOTS.length} robots`;
+  if(cnt) cnt.textContent = LANG==='zh' ? `共 ${total} 款（库内 ${ROBOTS.length}）` : `${total} of ${ROBOTS.length} robots`;
+  renderRobotPager(totalPages);
   applyI18n();
+}
+function renderRobotPager(totalPages){
+  const box=document.getElementById('robotPager');
+  if(!box) return;
+  if(totalPages<=1){ box.innerHTML=''; return; }
+  let html=`<button class="btn btn-ghost" onclick="robotPage=Math.max(1,robotPage-1);applyRobotFilters()" ${robotPage<=1?'disabled':''}>‹ ${t('prev')}</button>`;
+  html+=`<span style="font-size:13px;color:var(--muted)">${t('page_info').replace('{p}',robotPage).replace('{n}',totalPages)}</span>`;
+  html+=`<button class="btn btn-ghost" onclick="robotPage=Math.min(${totalPages},robotPage+1);applyRobotFilters()" ${robotPage>=totalPages?'disabled':''}>${t('next')} ›</button>`;
+  box.innerHTML=html;
 }
 let RFQS=[];   // 全量缓存，用于询盘客户端即时搜索
 async function loadRfq(){
@@ -215,19 +258,33 @@ async function loadRfq(){
 }
 function applyRfqFilter(){
   const q=(document.getElementById('rfqSearch').value||'').trim().toLowerCase();
+  const st=document.getElementById('fstatus').value;
   const list=RFQS.filter(r=>{
+    r.status=r.status||'pending';
+    if(st && r.status!==st) return false;
     if(!q) return true;
     const hay=[r.id,r.robotId,r.name,r.company,r.email,r.phone,r.message].filter(Boolean).join(' ').toLowerCase();
     return hay.includes(q);
   });
   const tb=document.querySelector('#rfqTable tbody');
-  tb.innerHTML=list.map(r=>`<tr>
-    <td>${r.id}</td><td>${r.robotId||'—'}</td><td>${r.name||''}</td><td>${r.company||''}</td>
-    <td>${r.email||''}</td><td>${r.phone||''}</td><td style="max-width:220px">${r.message||''}</td>
-    <td style="white-space:nowrap">${(r.createdAt||'').slice(0,10)}</td>
-  </tr>`).join('');
+  tb.innerHTML=list.map(r=>{
+    const done=(r.status||'pending')==='done';
+    const badge=done?`<span class="tag ok">✓ ${t('status_done')}</span>`:`<span class="tag warn">• ${t('status_pending')}</span>`;
+    const btn=done?`<span class="op" title="${t('mark_pending')}" onclick="toggleRfqStatus(${r.id},'pending')">↺</span>`:`<span class="op" title="${t('mark_done')}" onclick="toggleRfqStatus(${r.id},'done')">✓</span>`;
+    return `<tr>
+      <td>${r.id}</td><td>${r.robotId||'—'}</td><td>${r.name||''}</td><td>${r.company||''}</td>
+      <td>${r.email||''}</td><td>${r.phone||''}</td><td style="max-width:220px">${r.message||''}</td>
+      <td>${badge}<br>${btn}</td>
+      <td style="white-space:nowrap">${(r.createdAt||'').slice(0,10)}</td>
+    </tr>`;
+  }).join('');
   const cnt=document.getElementById('rfqCount');
   if(cnt) cnt.textContent = LANG==='zh' ? `共 ${list.length} 条（总 ${RFQS.length}）` : `${list.length} of ${RFQS.length}`;
+  applyI18n();
+}
+async function toggleRfqStatus(id, status){
+  await adminFetch('/api/admin/rfq/'+id, {method:'PATCH', body:JSON.stringify({status})});
+  loadRfq();
 }
 
 function openForm(id){
@@ -269,6 +326,34 @@ async function delRobot(id){
   if(!confirm('Delete this robot?')) return;
   const res=await adminFetch('/api/admin/robots/'+id,{method:'DELETE'});
   if(res.ok) loadRobots(); else alert('Delete failed');
+}
+
+/* ---- CSV exports (respect current filters) ---- */
+function exportRobots(){
+  const list=getFilteredRobots();
+  const header=['id','brand','brandZh','model','category','autonomy','country','payload','reach','dof','weight','price','priceText','year','featured','descEn','descZh','apps'];
+  const rows=list.map(r=>[r.id,r.brand,r.brandZh,r.model,r.category,r.autonomy,r.country,r.payload,r.reach,r.dof,r.weight,r.price,r.priceText,r.year,r.featured?1:0,r.descEn,r.descZh,(r.apps||[]).join('|')]);
+  exportCsv('robothub_robots_'+list.length+'.csv', header, rows);
+}
+function exportRfq(){
+  const st=document.getElementById('fstatus').value;
+  const q=(document.getElementById('rfqSearch').value||'').trim().toLowerCase();
+  const list=RFQS.filter(r=>{
+    r.status=r.status||'pending';
+    if(st && r.status!==st) return false;
+    if(!q) return true;
+    const hay=[r.id,r.robotId,r.name,r.company,r.email,r.phone,r.message].filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+  const header=['id','robotId','name','company','email','phone','message','status','createdAt'];
+  const rows=list.map(r=>[r.id,r.robotId,r.name,r.company,r.email,r.phone,r.message,r.status||'pending',r.createdAt]);
+  exportCsv('robothub_rfq_'+list.length+'.csv', header, rows);
+}
+function exportBrands(){
+  const list=_staticBrands();
+  const header=['brand','brandZh','country','models','categories'];
+  const rows=list.map(b=>[b.brand,b.brandZh,b.country,b.c,(b.cats||[]).join('|')]);
+  exportCsv('robothub_brands_'+list.length+'.csv', header, rows);
 }
 
 // init gate

@@ -119,9 +119,9 @@ function apiCompare(res, ids) {
 async function apiRfq(req, res) {
   const b = await readBody(req);
   if (!b.name || !b.email) return send(res, 400, { error: 'name & email required' });
-  const info = db.prepare(`INSERT INTO rfq (robotId,name,company,email,phone,message,createdAt)
-    VALUES (?,?,?,?,?,?,?)`).run(b.robotId||'', b.name, b.company||'', b.email,
-    b.phone||'', b.message||'', new Date().toISOString());
+  const info = db.prepare(`INSERT INTO rfq (robotId,name,company,email,phone,message,createdAt,status)
+    VALUES (?,?,?,?,?,?,?,?)`).run(b.robotId||'', b.name, b.company||'', b.email,
+    b.phone||'', b.message||'', new Date().toISOString(), 'pending');
   send(res, 200, { ok: true, id: Number(info.lastInsertRowid) });
 }
 
@@ -157,6 +157,18 @@ function adminDelete(req, res, id) {
 function adminRfqList(req, res) {
   if (!checkAdmin(req)) return send(res, 401, { error: 'unauthorized' });
   send(res, 200, db.prepare('SELECT * FROM rfq ORDER BY id DESC').all());
+}
+
+async function adminRfqUpdate(req, res, id) {
+  if (!checkAdmin(req)) return send(res, 401, { error: 'unauthorized' });
+  const b = await readBody(req);
+  const allowed = ['status', 'note'];
+  const sets = [], args = [];
+  for (const k of allowed) { if (b[k] != null) { sets.push(`${k} = ?`); args.push(b[k]); } }
+  if (!sets.length) return send(res, 200, { ok: true, id });
+  args.push(id);
+  db.prepare(`UPDATE rfq SET ${sets.join(', ')} WHERE id = ?`).run(...args);
+  return send(res, 200, { ok: true, id });
 }
 
 // ---------- Static ----------
@@ -204,6 +216,8 @@ const server = http.createServer(async (req, res) => {
     if (p.startsWith('/api/admin/robots/') && req.method === 'DELETE')
       return adminDelete(req, res, decodeURIComponent(p.split('/')[4]));
     if (p === '/api/admin/rfq' && req.method === 'GET') return adminRfqList(req, res);
+    if (p.startsWith('/api/admin/rfq/') && req.method === 'PATCH')
+      return adminRfqUpdate(req, res, decodeURIComponent(p.split('/')[4]));
 
     if (p.startsWith('/api/')) return send(res, 404, { error: 'unknown api' });
     return serveStatic(req, res, p);

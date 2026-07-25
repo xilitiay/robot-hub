@@ -12,6 +12,7 @@ const I18N = {
     latest_title:'Latest Additions', latest_sub:'Newest models in the database',
     filters:'Filters', f_category:'Category', f_brand:'Brand', f_country:'Country', f_autonomy:'Autonomy', reset:'Reset filters',
     sort_by:'Sort by', sort_featured:'Featured', sort_year:'Newest', sort_payload:'Payload', sort_price:'Price', sort_views:'Popular', sort_name:'Name', sort_models:'Model count', sort_country:'Country', group_by:'Group by', group_letter:'By letter', group_country:'By country', search_robots:'Search robots by brand or model…', all_categories:'All categories', all_countries:'All countries', search_rfq:'Search leads by name, company, email…',
+    rfq_status:'Status', status_pending:'Pending', status_done:'Processed', mark_done:'Mark processed', mark_pending:'Mark pending', filter_status:'Status', all_status:'All statuses', prev:'Prev', next:'Next', per_page:'Per page', page_info:'Page {p} of {n}', export_csv:'Export CSV', exp_robots:'Export robots', exp_rfq:'Export RFQ', exp_brands:'Export brands',
     theme_light:'Light', theme_dark:'Dark', search_ph:'Search robots, brands or models…',
     results:'results', all:'All',
     compare:'Compare', compare_now:'Compare now', clear:'Clear', request_quote:'Request Quote', view_detail:'View details',
@@ -41,6 +42,7 @@ const I18N = {
     latest_title:'最新收录', latest_sub:'数据库中的最新型号',
     filters:'筛选', f_category:'类目', f_brand:'品牌', f_country:'国家/地区', f_autonomy:'自主度', reset:'重置筛选',
     sort_by:'排序', sort_featured:'精选优先', sort_year:'最新', sort_payload:'负载', sort_price:'价格', sort_views:'热门', sort_name:'名称', sort_models:'型号数', sort_country:'国家/地区', group_by:'分组', group_letter:'按字母', group_country:'按国家', search_robots:'按品牌或型号搜索…', all_categories:'全部分类', all_countries:'全部国家', search_rfq:'按姓名/公司/邮箱搜索询盘…',
+    rfq_status:'状态', status_pending:'待处理', status_done:'已处理', mark_done:'标记已处理', mark_pending:'标记待处理', filter_status:'状态', all_status:'全部状态', prev:'上一页', next:'下一页', per_page:'每页', page_info:'第 {p} / {n} 页', export_csv:'导出 CSV', exp_robots:'导出机器人', exp_rfq:'导出询盘', exp_brands:'导出品牌',
     theme_light:'浅色', theme_dark:'深色', search_ph:'搜索机器人、品牌或型号…',
     results:'个结果', all:'全部',
     compare:'对比', compare_now:'立即对比', clear:'清空', request_quote:'询价', view_detail:'查看详情',
@@ -129,6 +131,13 @@ function staticAdminApi(path, opts={}){
   if (p === '/api/admin/rfq' && method === 'GET') {
     try { return Promise.resolve(JSON.parse(localStorage.getItem(ADMIN_RFQ_KEY)||'[]')); } catch(e){ return Promise.resolve([]); }
   }
+  const ru = p.match(/^\/api\/admin\/rfq\/(.+)$/);
+  if (ru) {
+    const id = Number(decodeURIComponent(ru[1]));
+    if (method === 'PATCH') {
+      return staticRfqUpdate(id, body);
+    }
+  }
   if (p === '/api/admin/robots' && method === 'POST') {
     const robot = _robotFromBody(body, null);
     const arr = _staticRobots(); arr.push(robot); _saveStaticRobots(arr);
@@ -153,9 +162,19 @@ function staticAdminApi(path, opts={}){
 }
 function staticRfqSubmit(body){
   let list=[]; try { list=JSON.parse(localStorage.getItem(ADMIN_RFQ_KEY)||'[]'); } catch(e){}
-  const item = { id: (list.length?Math.max(0,...list.map(x=>x.id||0)):0)+1, ...body, createdAt: new Date().toISOString() };
+  const item = { id: (list.length?Math.max(0,...list.map(x=>x.id||0)):0)+1, ...body,
+    status: body.status || 'pending', createdAt: body.createdAt || new Date().toISOString() };
   list.push(item); try { localStorage.setItem(ADMIN_RFQ_KEY, JSON.stringify(list)); } catch(e){}
   return Promise.resolve({ ok:true, id:item.id });
+}
+// 更新单条询价（用于标记已处理/状态流转），静态模式落本地 localStorage
+function staticRfqUpdate(id, patch){
+  let list=[]; try { list=JSON.parse(localStorage.getItem(ADMIN_RFQ_KEY)||'[]'); } catch(e){}
+  const i = list.findIndex(r=>r.id===id);
+  if(i<0) return Promise.resolve({ ok:false, error:'not found' });
+  list[i] = { ...list[i], ...patch };
+  try { localStorage.setItem(ADMIN_RFQ_KEY, JSON.stringify(list)); } catch(e){}
+  return Promise.resolve({ ok:true });
 }
 
 /* ---- Static (pre-rendered) mode: serve from bundled data instead of /api ---- */
@@ -332,6 +351,25 @@ function robotCard(r){
         <label class="cmp"><input type="checkbox" data-id="${r.id}" ${cmp?'checked':''} onchange="toggleCmp('${r.id}')"> <span data-i="compare">${t('compare')}</span></label>
       </div>
     </div></div>`;
+}
+
+/* ---- CSV export (UTF-8 BOM so Excel reads Chinese correctly) ---- */
+function exportCsv(filename, header, rows){
+  const esc = v => {
+    if (v == null) return '';
+    let s = String(v);
+    if (/[",\n\r]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  };
+  const lines = [header.map(esc).join(',')].concat(rows.map(r => r.map(esc).join(',')));
+  const csv = '﻿' + lines.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast(t('export_csv') + ': ' + filename, 'ok');
 }
 
 document.addEventListener('DOMContentLoaded',()=>{ document.documentElement.lang=LANG==='zh'?'zh-CN':'en'; });

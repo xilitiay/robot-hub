@@ -109,6 +109,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .tag{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.03em}
 .tag.cat{background:color-mix(in srgb,var(--c) 13%,#fff);color:var(--c)}
 .tag.auto{background:#f1f5f9;color:var(--muted)}
+.tag.ok{background:#dcfce7;color:#15803d;text-transform:none}
+.tag.warn{background:#fef9c3;color:#a16207;text-transform:none}
 .rcard .brand{font-size:12.5px;color:var(--muted);font-weight:600}
 .rcard h3{font-size:17px;font-weight:700;margin:2px 0 8px;letter-spacing:-.01em;line-height:1.25}
 .rcard .specs{display:flex;flex-wrap:wrap;gap:5px;margin-top:auto;padding-top:10px}

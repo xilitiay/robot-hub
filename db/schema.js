@@ -29,6 +29,12 @@ function initDb() {
     CREATE INDEX IF NOT EXISTS idx_robots_brand ON robots(brand);
   `);
 
+  // 迁移：rfq 增加 status 字段（幂等，兼容旧库）
+  try {
+    const cols = db.prepare('PRAGMA table_info(rfq)').all().map(c => c.name);
+    if (!cols.includes('status')) db.exec("ALTER TABLE rfq ADD COLUMN status TEXT DEFAULT 'pending'");
+  } catch (e) { console.error('[db] migrate rfq.status failed:', e && e.message); }
+
   const count = db.prepare('SELECT COUNT(*) AS c FROM robots').get().c;
   if (count === 0) {
     // merge both datasets, de-duplicating by id (first occurrence wins)
