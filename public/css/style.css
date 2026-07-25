@@ -177,15 +177,31 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 /* ===== Brands A–Z index ===== */
 .az-index{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 24px;position:sticky;top:68px;z-index:20;
   background:var(--surface);padding:10px 12px;border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(6px)}
-.az-index .az{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);
-  color:var(--muted);font-weight:700;font-size:13px;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center}
+.az-index .az{height:30px;min-width:30px;padding:0 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);
+  color:var(--muted);font-weight:700;font-size:13px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:3px;white-space:nowrap}
 .az-index .az.on{background:var(--primary);color:#fff;border-color:var(--primary)}
 .az-index .az.on:hover{filter:brightness(1.08)}
 .az-index .az:disabled{opacity:.32;cursor:default}
+.az-index .az i{font-style:normal;font-size:10px;font-weight:700;opacity:.7;line-height:1}
+.az-index .az.on i{opacity:.85}
+/* segmented secondary-nav control (group by letter / country) */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);flex:0 0 auto}
+.seg button{padding:9px 16px;font-size:14px;font-weight:600;color:var(--muted);transition:.15s;white-space:nowrap}
+.seg button.on{background:var(--primary);color:#fff}
+.seg button:hover:not(.on){background:var(--primary-l);color:var(--primary)}
 .brand-section{margin-bottom:32px;scroll-margin-top:128px}
 .brand-section-title{font-size:22px;font-weight:800;color:var(--primary);margin:0 0 14px;padding-left:10px;
   border-left:4px solid var(--primary);line-height:1;letter-spacing:.5px}
-@media(max-width:560px){ .az-index{top:60px;gap:4px;padding:8px} .az-index .az{width:26px;height:26px;font-size:12px} .brand-section-title{font-size:19px} }
+.brand-section-title small{font-size:13px;font-weight:600;color:var(--muted);margin-left:8px;letter-spacing:0}
+/* index bar: horizontal scroll on small screens so all letters/countries stay reachable */
+@media(max-width:560px){
+  .az-index{top:60px;gap:4px;padding:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+  .az-index::-webkit-scrollbar{height:5px}
+  .az-index::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+  .az-index .az{flex:0 0 auto;min-width:28px;height:28px;font-size:12px;padding:0 7px}
+  .brand-section-title{font-size:19px}
+  .brand-section-title small{display:block;margin:4px 0 0;font-size:12px}
+}
 
 /* ===== Brands toolbar (sort + search) ===== */
 .brand-tools{display:flex;gap:10px;align-items:center;min-width:300px;flex-wrap:wrap}

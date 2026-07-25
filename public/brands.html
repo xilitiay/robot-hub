@@ -16,7 +16,11 @@
     <p data-i="brands_sub"></p>
   </div>
     <div class="brand-tools">
-      <select id="bsort" class="sort-sel" onchange="renderBrands()">
+      <div class="seg" id="bgroupSeg" role="tablist" aria-label="group by">
+        <button type="button" data-v="letter" class="on" onclick="setGroup('letter')" data-i="group_letter"></button>
+        <button type="button" data-v="country" onclick="setGroup('country')" data-i="group_country"></button>
+      </div>
+      <select id="bsort" class="sort-sel" onchange="setSort(this.value)">
         <option value="name" data-i="sort_name"></option>
         <option value="count" data-i="sort_models"></option>
         <option value="country" data-i="sort_country"></option>
@@ -31,7 +35,12 @@
 
 <script>
 let ALL=[];
+let CMAP={};          // country code → {en,zh,flag} from META
 let azObserver=null;
+let bgroup=localStorage.getItem('rh_group')||'letter';
+let bsort=localStorage.getItem('rh_sort')||'name';
+function setGroup(v){ bgroup=v; localStorage.setItem('rh_group',v); document.querySelectorAll('#bgroupSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===v)); renderBrands(); }
+function setSort(v){ bsort=v; localStorage.setItem('rh_sort',v); renderBrands(); }
 // brand name → first letter bucket (A-Z or # for digits/symbols)
 function firstLetter(b){
   const n=(b.brand||'').trim();
@@ -62,25 +71,20 @@ function brandCard(b){
     <div class="meta"><span>${flag} ${countryName}</span><span>${cats.slice(0,2).join(' · ')}${cats.length>2?' +'+(cats.length-2):''}</span></div>
   </a>`;
 }
-function goLetter(L){
-  const el=document.getElementById('sec-'+L);
+function goGroup(K){
+  const el=document.getElementById('sec-'+K);
   if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
 }
-function highlightActive(L){
-  document.querySelectorAll('#azIndex .az').forEach(b=>b.classList.toggle('active', b.textContent===L));
+function highlightActive(K){
+  document.querySelectorAll('#azIndex .az').forEach(b=>b.classList.toggle('active', b.dataset.key===K));
 }
-// scroll-spy: highlight the letter currently in view
+// scroll-spy: highlight the group (letter or country) currently in view
 function setupScrollSpy(){
   if(azObserver) azObserver.disconnect();
   azObserver=new IntersectionObserver((entries)=>{
-    entries.forEach(e=>{ if(e.isIntersecting){ highlightActive(e.target.id.replace('sec-','')); } });
+    entries.forEach(e=>{ if(e.isIntersecting){ highlightActive(e.target.dataset.key); } });
   },{rootMargin:'-90px 0px -62% 0px', threshold:0});
   document.querySelectorAll('.brand-section').forEach(s=>azObserver.observe(s));
-}
-function renderAz(activeLetters){
-  const az=document.getElementById('azIndex');
-  const all='ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('');
-  az.innerHTML=all.map(L=>`<button class="az ${activeLetters.includes(L)?'on':''}" ${activeLetters.includes(L)?`onclick="goLetter('${L}')"`:'disabled'}>${L}</button>`).join('');
 }
 function sortBrands(arr,mode){
   const a=arr.slice();
@@ -92,32 +96,58 @@ function sortBrands(arr,mode){
 function renderBrands(){
   const grid=document.getElementById('grid'), emp=document.getElementById('empty'), az=document.getElementById('azIndex');
   const v=(document.getElementById('bs').value||'').trim().toLowerCase();
-  const mode=document.getElementById('bsort').value||'name';
+  const mode=bsort;
+  const group=bgroup;
   const list=ALL.filter(b=>(b.brand+' '+(b.brandZh||'')+' '+b.country).toLowerCase().includes(v));
   if(azObserver){ azObserver.disconnect(); azObserver=null; }
   document.querySelectorAll('#azIndex .az').forEach(b=>b.classList.remove('active'));
-  if(v || mode!=='name'){
-    az.classList.add('hide');
-    grid.innerHTML=sortBrands(list,mode).map(brandCard).join('');
+  emp.classList.toggle('hide',list.length>0);
+  grid.classList.toggle('hide',list.length===0);
+  if(!list.length){ az.classList.add('hide'); grid.innerHTML=''; return; }
+
+  if(group==='country'){
+    // 二级导航：按国家/地区分组
+    az.classList.remove('hide');
+    const groups={};
+    list.forEach(b=>{ const K=b.country||'??'; (groups[K]=groups[K]||[]).push(b); });
+    const keys=Object.keys(groups).sort((a,b)=>a.localeCompare(b));
+    grid.innerHTML=keys.map(K=>{
+      const info=CMAP[K]||{}, name=LANG==='zh'?info.zh:info.en;
+      return `<section class="brand-section" id="sec-${K}" data-key="${K}">
+        <h3 class="brand-section-title">${info.flag||''} ${K} <small>${name||K} · ${groups[K].length}</small></h3>
+        <div class="brand-grid">${sortBrands(groups[K],mode).map(brandCard).join('')}</div>
+      </section>`;
+    }).join('');
+    az.innerHTML=keys.map(K=>{
+      const info=CMAP[K]||{}, name=LANG==='zh'?info.zh:info.en;
+      return `<button class="az on" data-key="${K}" onclick="goGroup('${K}')" title="${name||K}">${info.flag||''}${K}<i>${groups[K].length}</i></button>`;
+    }).join('');
+    setupScrollSpy();
   } else {
+    // 按字母 A–Z 分组
     az.classList.remove('hide');
     const groups={};
     list.forEach(b=>{ const L=firstLetter(b); (groups[L]=groups[L]||[]).push(b); });
     const letters=Object.keys(groups).sort();
-    grid.innerHTML=letters.map(L=>`<section class="brand-section" id="sec-${L}">
-      <h3 class="brand-section-title">${L}</h3>
-      <div class="brand-grid">${groups[L].map(brandCard).join('')}</div>
+    grid.innerHTML=letters.map(L=>`<section class="brand-section" id="sec-${L}" data-key="${L}">
+      <h3 class="brand-section-title">${L} <small>${groups[L].length}</small></h3>
+      <div class="brand-grid">${sortBrands(groups[L],mode).map(brandCard).join('')}</div>
     </section>`).join('');
-    renderAz(letters);
+    const all='ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('');
+    az.innerHTML=all.map(L=>{
+      const n=groups[L]?groups[L].length:0;
+      return `<button class="az ${n?'on':''}" data-key="${L}" ${n?`onclick="goGroup('${L}')"`:'disabled'}>${L}<i>${n||''}</i></button>`;
+    }).join('');
     setupScrollSpy();
   }
   applyI18n();
-  emp.classList.toggle('hide',list.length>0);
-  grid.classList.toggle('hide',list.length===0);
 }
 function filterBrands(v){ renderBrands(); }
 async function init(){
   renderChrome('brands'); await loadMeta();
+  CMAP=META.countries||{};
+  document.getElementById('bsort').value=bsort;
+  document.querySelectorAll('#bgroupSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===bgroup));
   ALL=await api('/api/brands');
   renderBrands();
   applyI18n(); renderTray();
