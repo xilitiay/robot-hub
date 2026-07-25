@@ -150,12 +150,12 @@ function onCmpDrop(e,id){
 }
 /* ---- 雷达图（原生 Canvas，零依赖） ---- */
 const RADAR_DIMS=[
-  { key:'payload', label:t('spec_payload'), dir:'max' },
-  { key:'reach', label:t('spec_reach'), dir:'max' },
-  { key:'dof', label:t('spec_dof'), dir:'max' },
-  { key:'weight', label:t('spec_weight'), dir:'min' },
-  { key:'year', label:t('spec_year'), dir:'max' },
-  { key:'price', label:t('spec_price'), dir:'min' },
+  { key:'payload', label:t('spec_payload'), dir:'max', unit:' kg' },
+  { key:'reach', label:t('spec_reach'), dir:'max', unit:' mm' },
+  { key:'dof', label:t('spec_dof'), dir:'max', unit:' DOF' },
+  { key:'weight', label:t('spec_weight'), dir:'min', unit:' kg' },
+  { key:'year', label:t('spec_year'), dir:'max', unit:'' },
+  { key:'price', label:t('spec_price'), dir:'min', unit:'' },
 ];
 let RADAR_ON=(localStorage.getItem('cmp_radar_on')||'').split(',').filter(Boolean);
 if(!RADAR_ON.length) RADAR_ON=RADAR_DIMS.map(d=>d.key);
@@ -166,10 +166,12 @@ function toggleRadarDim(key){
   drawRadar(CMP_ITEMS);
 }
 const RADAR_COLORS=['#4f46e5','#10b981','#f59e0b','#ef4444'];
+let RADAR_PTS=[];  // 每个机器人每维度在 canvas(640)坐标系下的绘制点 + 原始值，供悬停命中检测
 function buildRadar(items){
   const chips=RADAR_DIMS.map(d=>`<button class="dim-chip ${RADAR_ON.includes(d.key)?'on':''}" onclick="toggleRadarDim('${d.key}')">${d.label}${d.dir==='min'?' ↓':' ↑'}</button>`).join('');
   return `<div class="cmp-radar"><h3>${t('cmp_radar')}</h3><div class="dim-chips">${chips}</div>`+
     `<canvas id="cmpRadar" width="640" height="640" style="width:100%;max-width:420px;height:auto;touch-action:none"></canvas>`+
+    `<div class="radar-tip" id="radarTip"></div>`+
     `<div class="radar-legend" id="radarLegend"></div></div>`;
 }
 function drawRadar(items){
@@ -179,6 +181,7 @@ function drawRadar(items){
   const ctx=cv.getContext&&cv.getContext('2d'); if(!ctx) return;
   const W=cv.width, H=cv.height, cx=W/2, cy=H/2, R=Math.min(W,H)/2-78;
   const N=DIMS.length; if(N<1) return;
+  RADAR_PTS=[];
   const norm=items.map(it=>DIMS.map(d=>{ const v=it[d.key]; return (v==null||isNaN(v))?null:v; }));
   const mm=DIMS.map((d,i)=>{ const vs=norm.map(a=>a[i]).filter(v=>v!=null); return { min:vs.length?Math.min(...vs):0, max:vs.length?Math.max(...vs):1 }; });
   ctx.clearRect(0,0,W,H);
@@ -194,15 +197,37 @@ function drawRadar(items){
   // 每个机器人多边形
   items.forEach((it,idx)=>{
     const color=RADAR_COLORS[idx%RADAR_COLORS.length];
+    RADAR_PTS[idx]=[];
     ctx.beginPath();
     DIMS.forEach((d,i)=>{ const m=mm[i]; let v=norm[idx][i];
       if(v==null||m.max===m.min) v=0.5; else v=(v-m.min)/(m.max-m.min);
-      const a=-Math.PI/2+i*2*Math.PI/N; const x=cx+R*v*Math.cos(a), y=cy+R*v*Math.sin(a); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+      const a=-Math.PI/2+i*2*Math.PI/N; const x=cx+R*v*Math.cos(a), y=cy+R*v*Math.sin(a);
+      const rawV=it[d.key]; const disp=(d.key==='price')?(it.priceText||rawV):(rawV==null?'—':rawV+(d.unit||''));
+      RADAR_PTS[idx].push({ x, y, label:d.label, disp, brand:LANG==='zh'?(it.brandZh||it.brand):it.brand, model:it.model });
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
     ctx.closePath(); ctx.fillStyle=color+'30'; ctx.fill(); ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
   });
   // 图例
   const lg=document.getElementById('radarLegend');
   if(lg) lg.innerHTML=items.map((it,idx)=>`<span class="rl"><i style="background:${RADAR_COLORS[idx%RADAR_COLORS.length]}"></i>${LANG==='zh'?(it.brandZh||it.brand):it.brand} ${it.model}</span>`).join('');
+  // 悬停数值提示
+  const tip=document.getElementById('radarTip');
+  if(cv && tip){
+    cv.onmousemove=(e)=>{
+      const rect=cv.getBoundingClientRect();
+      const sx=cv.width/rect.width, sy=cv.height/rect.height;
+      const mx=(e.clientX-rect.left)*sx, my=(e.clientY-rect.top)*sy;
+      let best=null, bd=16;
+      RADAR_PTS.forEach(arr=>arr.forEach(p=>{ const dd=Math.hypot(p.x-mx,p.y-my); if(dd<bd){ bd=dd; best=p; } }));
+      if(best){
+        tip.innerHTML=`<div class="rt-brand">${best.brand} ${best.model}</div><div class="rt-val">${best.label}：<b>${best.disp}</b></div>`;
+        let lx=e.clientX+14, ty=e.clientY+14;
+        if(lx+235>window.innerWidth) lx=e.clientX-235;
+        tip.style.left=lx+'px'; tip.style.top=ty+'px'; tip.classList.add('on');
+      } else tip.classList.remove('on');
+    };
+    cv.onmouseleave=()=>tip.classList.remove('on');
+  }
 }
 async function init(){
   mergeFromUrl();
