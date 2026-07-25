@@ -48,6 +48,11 @@
       <select id="fcountry" class="sort-sel" onchange="applyRobotFilters()">
         <option value="" data-i="all_countries"></option>
       </select>
+      <select id="fsort" class="sort-sel" onchange="applyRobotFilters()" title="Sort">
+        <option value="year" data-i="sort_year"></option>
+        <option value="payload" data-i="sort_payload"></option>
+        <option value="name" data-i="sort_name"></option>
+      </select>
       <button class="btn btn-primary" onclick="openForm()" data-i="add_robot"></button>
     </div>
     <div style="margin-bottom:10px;font-size:13px;color:var(--muted)"><span id="robotCount"></span></div>
@@ -59,6 +64,10 @@
   </div>
 
   <div id="panelRfq" class="hide">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px">
+      <input id="rfqSearch" class="hero-search" style="flex:1;min-width:200px;padding:9px 14px;border:1px solid var(--line);border-radius:10px;font-size:14px" data-ph="search_rfq" oninput="applyRfqFilter()">
+      <span id="rfqCount" style="font-size:13px;color:var(--muted)"></span>
+    </div>
     <div style="overflow:auto">
       <table class="admin-table" id="rfqTable"><thead><tr>
         <th>#</th><th>Robot</th><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Message</th><th data-i="spec_year">Date</th>
@@ -178,6 +187,12 @@ function applyRobotFilters(){
     if(q){ const hay=(r.brand+' '+(r.brandZh||'')+' '+r.model).toLowerCase(); if(!hay.includes(q)) return false; }
     return true;
   });
+  const sort=document.getElementById('fsort').value;
+  list.sort((a,b)=>{
+    if(sort==='payload') return (b.payload||0)-(a.payload||0);
+    if(sort==='name') return (a.brand+a.model).localeCompare(b.brand+b.model);
+    return (b.year||0)-(a.year||0);   // default: newest first
+  });
   const tb=document.querySelector('#robotTable tbody');
   tb.innerHTML=list.map(r=>`<tr>
     <td><b>${r.brand}</b>${r.brandZh?'<br><span style="color:var(--muted);font-size:12px">'+r.brandZh+'</span>':''}</td>
@@ -192,14 +207,27 @@ function applyRobotFilters(){
   if(cnt) cnt.textContent = LANG==='zh' ? `共 ${list.length} 款（库内 ${ROBOTS.length}）` : `${list.length} of ${ROBOTS.length} robots`;
   applyI18n();
 }
+let RFQS=[];   // 全量缓存，用于询盘客户端即时搜索
 async function loadRfq(){
   const list=await adminFetch('/api/admin/rfq');
+  RFQS=Array.isArray(list)?list:[];
+  applyRfqFilter();
+}
+function applyRfqFilter(){
+  const q=(document.getElementById('rfqSearch').value||'').trim().toLowerCase();
+  const list=RFQS.filter(r=>{
+    if(!q) return true;
+    const hay=[r.id,r.robotId,r.name,r.company,r.email,r.phone,r.message].filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(q);
+  });
   const tb=document.querySelector('#rfqTable tbody');
   tb.innerHTML=list.map(r=>`<tr>
     <td>${r.id}</td><td>${r.robotId||'—'}</td><td>${r.name||''}</td><td>${r.company||''}</td>
     <td>${r.email||''}</td><td>${r.phone||''}</td><td style="max-width:220px">${r.message||''}</td>
     <td style="white-space:nowrap">${(r.createdAt||'').slice(0,10)}</td>
   </tr>`).join('');
+  const cnt=document.getElementById('rfqCount');
+  if(cnt) cnt.textContent = LANG==='zh' ? `共 ${list.length} 条（总 ${RFQS.length}）` : `${list.length} of ${RFQS.length}`;
 }
 
 function openForm(id){
