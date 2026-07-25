@@ -20,7 +20,7 @@ const I18N = {
     applications:'Applications', related:'Related robots', back:'Back',
     rfq_title:'Request a Quote', rfq_sub:'Send an enquiry directly to the supplier. No checkout, no commission.',
     rfq_name:'Your name', rfq_company:'Company', rfq_email:'Email', rfq_phone:'Phone', rfq_msg:'Message', submit:'Submit', cancel:'Cancel', rfq_ok:'Enquiry sent! The supplier will contact you.',
-    cmp_title:'Compare Robots', cmp_empty:'No robots selected. Add robots from the catalog to compare.', cmp_export:'Export CSV', share_link:'Copy link', copied:'Link copied', diff_only:'Differences only', cmp_add:'Add robot', cmp_select_first:'Select robots to share', cmp_max:'You can compare up to 4 robots', cmp_radar:'Radar chart', drag_sort:'Drag to reorder',
+    cmp_title:'Compare Robots', cmp_empty:'No robots selected. Add robots from the catalog to compare.', cmp_export:'Export CSV', share_link:'Copy link', copied:'Link copied', diff_only:'Differences only', cmp_add:'Add robot', cmp_select_first:'Select robots to share', cmp_max:'You can compare up to 6 robots', cmp_radar:'Radar chart', drag_sort:'Drag to reorder', swipe_hint:'← Swipe to see all columns →',
     brands_title:'All Brands', brands_sub:'Leading robotics manufacturers worldwide', models:'models',
     admin_title:'Admin Console', admin_sub:'Manage the robot database & view RFQ enquiries',
     admin_robots:'Robots', admin_rfq:'RFQ Enquiries', add_robot:'+ Add Robot', edit:'Edit', del:'Delete',
@@ -50,7 +50,7 @@ const I18N = {
     applications:'应用场景', related:'相关机器人', back:'返回',
     rfq_title:'发起询价', rfq_sub:'直接向供应商发送需求。无需下单，零佣金。',
     rfq_name:'您的姓名', rfq_company:'公司', rfq_email:'邮箱', rfq_phone:'电话', rfq_msg:'留言', submit:'提交', cancel:'取消', rfq_ok:'询价已发送！供应商将与您联系。',
-    cmp_title:'机器人对比', cmp_empty:'尚未选择机器人。请从产品库中添加机器人进行对比。', cmp_export:'导出 CSV', share_link:'复制链接', copied:'链接已复制', diff_only:'只看差异', cmp_add:'添加机器人', cmp_select_first:'请先选择机器人', cmp_max:'最多对比 4 款机器人', cmp_radar:'雷达图', drag_sort:'拖拽排序',
+    cmp_title:'机器人对比', cmp_empty:'尚未选择机器人。请从产品库中添加机器人进行对比。', cmp_export:'导出 CSV', share_link:'复制链接', copied:'链接已复制', diff_only:'只看差异', cmp_add:'添加机器人', cmp_select_first:'请先选择机器人', cmp_max:'最多对比 6 款机器人', cmp_radar:'雷达图', drag_sort:'拖拽排序', swipe_hint:'← 左右滑动查看全部列 →',
     brands_title:'全部品牌', brands_sub:'全球领先的机器人制造商', models:'款型号',
     admin_title:'管理控制台', admin_sub:'管理机器人数据库并查看询价记录',
     admin_robots:'机器人', admin_rfq:'询价记录', add_robot:'+ 新增机器人', edit:'编辑', del:'删除',
@@ -231,8 +231,9 @@ function staticApi(path, opts){
 
 /* ---- Compare store ---- */
 const CMP_KEY='cmp_ids';
+const CMP_MAX=6;
 const getCmp=()=>JSON.parse(localStorage.getItem(CMP_KEY)||'[]');
-const setCmp=(a)=>{localStorage.setItem(CMP_KEY,JSON.stringify(a.slice(0,4)));renderTray();};
+const setCmp=(a)=>{localStorage.setItem(CMP_KEY,JSON.stringify(a.slice(0,CMP_MAX)));renderTray();};
 function toggleCmp(id){
   let a=getCmp();
   if(a.includes(id)){
@@ -240,7 +241,7 @@ function toggleCmp(id){
     setCmp(a);
     toast(LANG==='zh'?'已移出对比':'Removed from compare','ok');
   } else {
-    if(a.length>=4){ toast(t('cmp_max'),'err'); return; }
+    if(a.length>=CMP_MAX){ toast(t('cmp_max'),'err'); return; }
     a.push(id);
     setCmp(a);
     toast(LANG==='zh'?'已加入对比':'Added to compare','ok');
