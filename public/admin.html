@@ -273,7 +273,10 @@ async function delRobot(id){
 
 // init gate
 document.addEventListener('langchange',()=>{ if(!document.getElementById('console').classList.contains('hide')){ applyI18n(); loadRobots(); } });
-if(TOKEN){ unlock(); } else { renderChrome('admin'); }
+// 静态演示模式：加载即自动解锁，免去登录门槛（真实服务端模式仍走令牌校验）
+if(STATIC_MODE){ document.getElementById('tk').value='robothub-admin-2026'; unlock(); }
+else if(TOKEN){ unlock(); }
+else { renderChrome('admin'); }
 </script>
 </body>
 </html>
