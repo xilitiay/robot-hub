@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const robots = require('../data/robots.js');
 const robotsExtra = require('../data/robots_extra.js');
-const { categories, autonomyLevels, countries } = require('../data/meta.js');
+const { categories, autonomyLevels, countries, continents } = require('../data/meta.js');
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'robot-hub.db');
 
@@ -54,4 +54,4 @@ function initDb() {
   return db;
 }
 
-module.exports = { initDb, DB_PATH, categories, autonomyLevels, countries };
+module.exports = { initDb, DB_PATH, categories, autonomyLevels, countries, continents };

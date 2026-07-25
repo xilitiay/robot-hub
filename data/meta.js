@@ -21,31 +21,39 @@ const autonomyLevels = [
 ];
 
 const countries = {
-  JP: { en: 'Japan', zh: '日本', flag: '🇯🇵' },
-  CN: { en: 'China', zh: '中国', flag: '🇨🇳' },
-  US: { en: 'United States', zh: '美国', flag: '🇺🇸' },
-  DE: { en: 'Germany', zh: '德国', flag: '🇩🇪' },
-  CH: { en: 'Switzerland', zh: '瑞士', flag: '🇨🇭' },
-  SE: { en: 'Sweden', zh: '瑞典', flag: '🇸🇪' },
-  DK: { en: 'Denmark', zh: '丹麦', flag: '🇩🇰' },
-  KR: { en: 'South Korea', zh: '韩国', flag: '🇰🇷' },
-  IT: { en: 'Italy', zh: '意大利', flag: '🇮🇹' },
-  NL: { en: 'Netherlands', zh: '荷兰', flag: '🇳🇱' },
-  NO: { en: 'Norway', zh: '挪威', flag: '🇳🇴' },
-  TW: { en: 'Taiwan, China', zh: '中国台湾', flag: '🇨🇳' },
-  IL: { en: 'Israel', zh: '以色列', flag: '🇮🇱' },
-  FR: { en: 'France', zh: '法国', flag: '🇫🇷' },
-  PL: { en: 'Poland', zh: '波兰', flag: '🇵🇱' },
-  GB: { en: 'United Kingdom', zh: '英国', flag: '🇬🇧' },
-  CA: { en: 'Canada', zh: '加拿大', flag: '🇨🇦' },
-  SG: { en: 'Singapore', zh: '新加坡', flag: '🇸🇬' },
-  ES: { en: 'Spain', zh: '西班牙', flag: '🇪🇸' },
-  AT: { en: 'Austria', zh: '奥地利', flag: '🇦🇹' },
-  AU: { en: 'Australia', zh: '澳大利亚', flag: '🇦🇺' },
-  IN: { en: 'India', zh: '印度', flag: '🇮🇳' },
-  BR: { en: 'Brazil', zh: '巴西', flag: '🇧🇷' },
-  BE: { en: 'Belgium', zh: '比利时', flag: '🇧🇪' },
-  FI: { en: 'Finland', zh: '芬兰', flag: '🇫🇮' }
+  JP: { en: 'Japan', zh: '日本', flag: '🇯🇵', continent: 'asia' },
+  CN: { en: 'China', zh: '中国', flag: '🇨🇳', continent: 'asia' },
+  US: { en: 'United States', zh: '美国', flag: '🇺🇸', continent: 'americas' },
+  DE: { en: 'Germany', zh: '德国', flag: '🇩🇪', continent: 'europe' },
+  CH: { en: 'Switzerland', zh: '瑞士', flag: '🇨🇭', continent: 'europe' },
+  SE: { en: 'Sweden', zh: '瑞典', flag: '🇸🇪', continent: 'europe' },
+  DK: { en: 'Denmark', zh: '丹麦', flag: '🇩🇰', continent: 'europe' },
+  KR: { en: 'South Korea', zh: '韩国', flag: '🇰🇷', continent: 'asia' },
+  IT: { en: 'Italy', zh: '意大利', flag: '🇮🇹', continent: 'europe' },
+  NL: { en: 'Netherlands', zh: '荷兰', flag: '🇳🇱', continent: 'europe' },
+  NO: { en: 'Norway', zh: '挪威', flag: '🇳🇴', continent: 'europe' },
+  TW: { en: 'Taiwan, China', zh: '中国台湾', flag: '🇨🇳', continent: 'asia' },
+  IL: { en: 'Israel', zh: '以色列', flag: '🇮🇱', continent: 'asia' },
+  FR: { en: 'France', zh: '法国', flag: '🇫🇷', continent: 'europe' },
+  PL: { en: 'Poland', zh: '波兰', flag: '🇵🇱', continent: 'europe' },
+  GB: { en: 'United Kingdom', zh: '英国', flag: '🇬🇧', continent: 'europe' },
+  CA: { en: 'Canada', zh: '加拿大', flag: '🇨🇦', continent: 'americas' },
+  SG: { en: 'Singapore', zh: '新加坡', flag: '🇸🇬', continent: 'asia' },
+  ES: { en: 'Spain', zh: '西班牙', flag: '🇪🇸', continent: 'europe' },
+  AT: { en: 'Austria', zh: '奥地利', flag: '🇦🇹', continent: 'europe' },
+  AU: { en: 'Australia', zh: '澳大利亚', flag: '🇦🇺', continent: 'oceania' },
+  IN: { en: 'India', zh: '印度', flag: '🇮🇳', continent: 'asia' },
+  BR: { en: 'Brazil', zh: '巴西', flag: '🇧🇷', continent: 'americas' },
+  BE: { en: 'Belgium', zh: '比利时', flag: '🇧🇪', continent: 'europe' },
+  FI: { en: 'Finland', zh: '芬兰', flag: '🇫🇮', continent: 'europe' }
 };
 
-module.exports = { categories, autonomyLevels, countries };
+// 大洲聚合（用于品牌页「按国家分组」的二级导航） / Continents for brand grouping
+const continents = {
+  asia:     { en: 'Asia',     zh: '亚洲',   flag: '🌏', order: 1 },
+  europe:   { en: 'Europe',   zh: '欧洲',   flag: '🌍', order: 2 },
+  americas: { en: 'Americas', zh: '美洲',   flag: '🌎', order: 3 },
+  oceania:  { en: 'Oceania',  zh: '大洋洲', flag: '🇦🇺', order: 4 }
+};
+
+module.exports = { categories, autonomyLevels, countries, continents };

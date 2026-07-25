@@ -37,7 +37,8 @@
 
 <script>
 let ALL=[];
-let CMAP={};          // country code → {en,zh,flag} from META
+let CMAP={};          // country code → {en,zh,flag,continent} from META
+let CONT={};          // continent code → {en,zh,flag,order} from META (+ 'other' fallback)
 let azObserver=null;
 let bgroup=localStorage.getItem('rh_group')||'letter';
 let bsort=localStorage.getItem('rh_sort')||'name';
@@ -108,21 +109,41 @@ function renderBrands(){
   if(!list.length){ az.classList.add('hide'); grid.innerHTML=''; return; }
 
   if(group==='country'){
-    // 二级导航：按国家/地区分组
+    // 三级导航：大洲 → 国家/地区 → 品牌
     az.classList.remove('hide');
-    const groups={};
-    list.forEach(b=>{ const K=b.country||'??'; (groups[K]=groups[K]||[]).push(b); });
-    const keys=Object.keys(groups).sort((a,b)=>a.localeCompare(b));
-    grid.innerHTML=keys.map(K=>{
-      const info=CMAP[K]||{}, name=LANG==='zh'?info.zh:info.en;
-      return `<section class="brand-section" id="sec-${K}" data-key="${K}">
-        <h3 class="brand-section-title">${info.flag||''} ${K} <small>${name||K} · ${groups[K].length}</small></h3>
-        <div class="brand-grid">${sortBrands(groups[K],mode).map(brandCard).join('')}</div>
+    const byCont={};
+    list.forEach(b=>{
+      const cont=(CMAP[b.country]&&CMAP[b.country].continent)||'other';
+      (byCont[cont]=byCont[cont]||[]).push(b);
+    });
+    // 大洲按 meta.order 排序，同序再按品牌数降序
+    const contKeys=Object.keys(byCont).sort((a,b)=>{
+      const oa=(CONT[a]&&CONT[a].order)||99, ob=(CONT[b]&&CONT[b].order)||99;
+      if(oa!==ob) return oa-ob;
+      return byCont[b].length-byCont[a].length;
+    });
+    grid.innerHTML=contKeys.map(cont=>{
+      const cinfo=CONT[cont]||{flag:'🌐',zh:'其他',en:'Other'};
+      const cname=LANG==='zh'?cinfo.zh:cinfo.en;
+      const brands=byCont[cont];
+      const cg={};
+      brands.forEach(b=>{ const K=b.country||'??'; (cg[K]=cg[K]||[]).push(b); });
+      const ckeys=Object.keys(cg).sort((a,b)=>a.localeCompare(b));
+      return `<section class="brand-section" id="sec-${cont}" data-key="${cont}">
+        <h3 class="brand-section-title cont-title">${cinfo.flag} ${cname} <small>${brands.length}</small></h3>
+        <div class="cont-body">${ckeys.map(K=>{
+          const info=CMAP[K]||{}, name=LANG==='zh'?info.zh:info.en;
+          return `<section class="brand-sub" id="sec-${K}" data-key="${K}">
+            <h4 class="brand-sub-title">${info.flag||''} ${K} <small>${name||K} · ${cg[K].length}</small></h4>
+            <div class="brand-grid">${sortBrands(cg[K],mode).map(brandCard).join('')}</div>
+          </section>`;
+        }).join('')}</div>
       </section>`;
     }).join('');
-    az.innerHTML=keys.map(K=>{
-      const info=CMAP[K]||{}, name=LANG==='zh'?info.zh:info.en;
-      return `<button class="az on" data-key="${K}" onclick="goGroup('${K}')" title="${name||K}">${info.flag||''}${K}<i>${groups[K].length}</i></button>`;
+    az.innerHTML=contKeys.map(cont=>{
+      const cinfo=CONT[cont]||{flag:'🌐',zh:'其他',en:'Other'};
+      const cname=LANG==='zh'?cinfo.zh:cinfo.en;
+      return `<button class="az on" data-key="${cont}" onclick="goGroup('${cont}')" title="${cname}">${cinfo.flag}${cname}<i>${byCont[cont].length}</i></button>`;
     }).join('');
     setupScrollSpy();
   } else {
@@ -149,6 +170,7 @@ function filterBrands(){ _filterD(); }   // 防抖，避免每次击键都全量
 async function init(){
   renderChrome('brands'); await loadMeta();
   CMAP=META.countries||{};
+  CONT=Object.assign({other:{en:'Other',zh:'其他',flag:'🌐',order:99}}, META.continents||{});
   document.getElementById('bsort').value=bsort;
   document.querySelectorAll('#bgroupSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===bgroup));
   ALL=await api('/api/brands');

@@ -5,7 +5,7 @@ const path = require('path');
 
 const robots = require('./data/robots.js');
 const robotsExtra = require('./data/robots_extra.js');
-const { categories, autonomyLevels, countries } = require('./data/meta.js');
+const { categories, autonomyLevels, countries, continents } = require('./data/meta.js');
 
 // mirror db/schema.js dedup (first wins)
 const seen = new Set();
@@ -33,7 +33,7 @@ robotsOut.forEach(r => {
   countryCounts[r.country] = (countryCounts[r.country] || 0) + 1;
 });
 const meta = {
-  categories, autonomyLevels, countries,
+  categories, autonomyLevels, countries, continents,
   stats: { total, brandCount, catCounts, countryCounts, categoryCount: categories.length }
 };
 
@@ -45,7 +45,7 @@ robotsOut.forEach(r => {
   byBrand[r.brand].cats.add(r.category);
 });
 const brandsOut = Object.values(byBrand)
-  .map(b => ({ ...b, cats: [...b.cats] }))
+  .map(b => ({ ...b, cats: [...b.cats], countryInfo: countries[b.country] || null }))
   .sort((a, b) => b.c - a.c);
 
 // write bundle

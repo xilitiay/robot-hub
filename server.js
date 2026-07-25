@@ -4,7 +4,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
-const { initDb, categories, autonomyLevels, countries } = require('./db/schema.js');
+const { initDb, categories, autonomyLevels, countries, continents } = require('./db/schema.js');
 
 const db = initDb();
 
@@ -58,7 +58,7 @@ function apiMeta(res) {
   const countryCounts = {};
   db.prepare('SELECT country, COUNT(*) c FROM robots GROUP BY country').all()
     .forEach(row => countryCounts[row.country] = row.c);
-  send(res, 200, { categories, autonomyLevels, countries,
+  send(res, 200, { categories, autonomyLevels, countries, continents,
     stats: { total, brandCount, catCounts, countryCounts, categoryCount: categories.length } });
 }
 

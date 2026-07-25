@@ -193,6 +193,12 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .brand-section-title{font-size:22px;font-weight:800;color:var(--primary);margin:0 0 14px;padding-left:10px;
   border-left:4px solid var(--primary);line-height:1;letter-spacing:.5px}
 .brand-section-title small{font-size:13px;font-weight:600;color:var(--muted);margin-left:8px;letter-spacing:0}
+/* continent group (top level of country mode) */
+.brand-section-title.cont-title{font-size:24px;border-left-color:var(--violet);color:var(--ink)}
+/* country sub-group under a continent */
+.brand-sub{margin:18px 0 4px;padding-top:14px;border-top:1px dashed var(--line);scroll-margin-top:140px}
+.brand-sub-title{font-size:16px;font-weight:700;color:var(--ink-2);margin:0 0 10px;display:flex;align-items:baseline;gap:6px;letter-spacing:.3px}
+.brand-sub-title small{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:0}
 /* index bar: horizontal scroll on small screens so all letters/countries stay reachable */
 @media(max-width:560px){
   .az-index{top:60px;gap:4px;padding:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
@@ -200,6 +206,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
   .az-index::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
   .az-index .az{flex:0 0 auto;min-width:28px;height:28px;font-size:12px;padding:0 7px}
   .brand-section-title{font-size:19px}
+  .brand-section-title.cont-title{font-size:20px}
+  .brand-sub-title{font-size:15px}
   .brand-section-title small{display:block;margin:4px 0 0;font-size:12px}
 }
 
