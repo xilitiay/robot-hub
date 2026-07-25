@@ -81,7 +81,7 @@ async function render(){
         ${r.apps&&r.apps.length?`<div class="app-chips">${r.apps.map(a=>`<span class="app-chip">${a}</span>`).join('')}</div>`:''}
         <div class="detail-actions">
           <button class="btn btn-primary" onclick="openRfq()" data-i="request_quote"></button>
-          <button class="btn btn-ghost" onclick="toggleCmp('${r.id}');toast(LANG==='zh'?'已加入对比':'Added to compare','ok')" data-i="compare"></button>
+          <button class="btn btn-ghost" onclick="toggleCmp('${r.id}')" data-i="compare"></button>
           <a class="btn btn-ghost" href="/catalog.html?category=${r.category}" data-i="back"></a>
         </div>
       </div>

@@ -12,15 +12,23 @@
 <body>
 <script src="/js/app.js"></script>
 
-<div class="container" style="padding:32px 0 60px">
-  <div class="section-head"><div><h2 data-i="cmp_title"></h2></div>
-    <button class="btn btn-ghost cmp-export" id="expBtn" onclick="exportCsv()" style="display:none" data-i="cmp_export"></button>
+<div class="container" style="padding:32px 0 80px">
+  <div class="section-head"><div>
+    <h2 data-i="cmp_title"></h2>
+    <p class="cmp-sub" id="cmpSub"></p>
+  </div>
+    <div class="cmp-actions">
+      <button class="btn btn-ghost" id="diffBtn" onclick="toggleDiff()" data-i="diff_only" title="Hide rows where all robots are identical"></button>
+      <button class="btn btn-ghost" onclick="copyLink()" data-i="share_link"></button>
+      <button class="btn btn-primary cmp-export" id="expBtn" onclick="exportCsv()" style="display:none" data-i="cmp_export"></button>
+    </div>
   </div>
   <div id="root"></div>
 </div>
 
 <script>
 let CMP_ITEMS=[];
+let DIFF_ONLY = localStorage.getItem('cmp_diff')==='1';
 function bestIndex(vals, dir){ // dir 'max' or 'min'
   let bi=-1, bv=null;
   vals.forEach((v,i)=>{ if(v==null||isNaN(v)) return; if(bv===null||(dir==='max'?v>bv:v<bv)){bv=v;bi=i;} });
@@ -28,16 +36,17 @@ function bestIndex(vals, dir){ // dir 'max' or 'min'
 }
 function buildRows(){
   return [
-    { label:t('spec_brand'), get:r=>LANG==='zh'?(r.brandZh||r.brand):r.brand, csv:true },
-    { label:t('spec_category'), get:r=>{const c=META.categories.find(x=>x.id===r.category);return LANG==='zh'?c.zh:c.en;} },
-    { label:t('spec_autonomy'), get:r=>{const a=META.autonomyLevels.find(x=>x.id===r.autonomy);return LANG==='zh'?a.zh:a.en;} },
-    { label:t('spec_country'), get:r=>r.countryInfo?(LANG==='zh'?r.countryInfo.zh:r.countryInfo.en):'—' },
-    { label:t('spec_payload')+' (kg)', get:r=>r.payload, num:'max' },
-    { label:t('spec_reach')+' (mm)', get:r=>r.reach, num:'max' },
-    { label:t('spec_dof'), get:r=>r.dof, num:'max' },
-    { label:t('spec_weight')+' (kg)', get:r=>r.weight, num:'min' },
-    { label:t('spec_year'), get:r=>r.year, num:'max' },
-    { label:t('spec_price'), get:r=>r.priceText },
+    { key:'brand', label:t('spec_brand'), get:r=>LANG==='zh'?(r.brandZh||r.brand):r.brand, alwaysShow:true, csv:true },
+    { key:'category', label:t('spec_category'), get:r=>{const c=META.categories.find(x=>x.id===r.category);return c?(LANG==='zh'?c.zh:c.en):r.category;}, csv:true },
+    { key:'autonomy', label:t('spec_autonomy'), get:r=>{const a=META.autonomyLevels.find(x=>x.id===r.autonomy);return a?(LANG==='zh'?a.zh:a.en):r.autonomy;}, csv:true },
+    { key:'country', label:t('spec_country'), get:r=>r.countryInfo?(LANG==='zh'?r.countryInfo.zh:r.countryInfo.en):'—' },
+    { key:'payload', label:t('spec_payload')+' (kg)', get:r=>r.payload, num:'max' },
+    { key:'reach', label:t('spec_reach')+' (mm)', get:r=>r.reach, num:'max' },
+    { key:'dof', label:t('spec_dof'), get:r=>r.dof, num:'max' },
+    { key:'weight', label:t('spec_weight')+' (kg)', get:r=>r.weight, num:'min' },
+    { key:'year', label:t('spec_year'), get:r=>r.year, num:'max' },
+    { key:'price', label:t('spec_price'), get:r=>r.priceText },
+    { key:'apps', label:t('applications'), get:r=>(r.apps||[]).join(LANG==='zh'?'、':', '), csv:true },
   ];
 }
 function csvCell(v){ if(v==null||v==='') v='—'; return '"'+String(v).replace(/"/g,'""')+'"'; }
@@ -51,26 +60,85 @@ function exportCsv(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download='robothub-compare.csv'; a.click(); URL.revokeObjectURL(a.href);
 }
+// 分享：从 URL ?ids= 合并进本地对比集（去重，截断 4）
+function mergeFromUrl(){
+  try{
+    const q=new URLSearchParams(location.search);
+    const ids=(q.get('ids')||'').split(',').filter(Boolean);
+    if(ids.length){
+      let a=getCmp();
+      ids.forEach(id=>{ if(!a.includes(id)) a.push(id); });
+      setCmp(a.slice(0,4));
+      history.replaceState(null,'',location.pathname);
+    }
+  }catch(e){}
+}
+function toggleDiff(){
+  DIFF_ONLY=!DIFF_ONLY;
+  localStorage.setItem('cmp_diff',DIFF_ONLY?'1':'0');
+  const b=document.getElementById('diffBtn'); if(b) b.classList.toggle('on',DIFF_ONLY);
+  render();
+}
+function copyLink(){
+  const ids=getCmp();
+  if(!ids.length){ toast(t('cmp_select_first'),'err'); return; }
+  const url = location.origin+location.pathname+'?ids='+ids.join(',');
+  const done=()=>toast(t('copied'),'ok');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(done).catch(()=>fallbackCopy(url,done));
+  } else fallbackCopy(url,done);
+}
+function fallbackCopy(text,cb){
+  const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  ta.remove(); cb&&cb();
+}
 async function render(){
   const ids=getCmp();
   const root=document.getElementById('root');
-  if(!ids.length){ root.innerHTML=`<div class="empty"><div class="e">⚖️</div><p data-i="cmp_empty"></p><a class="btn btn-primary" style="margin-top:16px" href="/catalog.html" data-i="nav_catalog"></a></div>`; applyI18n(); document.getElementById('expBtn').style.display='none'; return; }
+  const expBtn=document.getElementById('expBtn');
+  if(!ids.length){
+    root.innerHTML=`<div class="empty"><div class="e">⚖️</div><p data-i="cmp_empty"></p><a class="btn btn-primary" style="margin-top:16px" href="/catalog.html" data-i="nav_catalog"></a></div>`;
+    applyI18n(); expBtn.style.display='none';
+    const sub=document.getElementById('cmpSub'); if(sub) sub.textContent='';
+    return;
+  }
   const d=await api('/api/compare?ids='+ids.join(','));
   const items=d.items; CMP_ITEMS=items;
-  document.getElementById('expBtn').style.display=items.length?'inline-flex':'none';
+  expBtn.style.display=items.length?'inline-flex':'none';
+  const sub=document.getElementById('cmpSub');
+  if(sub) sub.textContent = LANG==='zh' ? `已选择 ${items.length} / 4 款` : `${items.length} of 4 selected`;
   const rows=buildRows();
+  // 计算每行是否所有机器人取值一致（用于「只看差异」）
+  rows.forEach(row=>{
+    const vals=items.map(r=>{ let v=row.get(r); return v==null?'':String(v); });
+    row._uniform = vals.length>0 && vals.every(v=>v===vals[0]);
+  });
   let h='<div style="overflow-x:auto"><table class="cmp-table"><tr><th class="rowlabel"></th>'+items.map(r=>`<th>${r.model}<div style="font-weight:400;color:var(--muted);font-size:12.5px">${LANG==='zh'?(r.brandZh||r.brand):r.brand}</div></th>`).join('')+'</tr>';
   h+='<tr><td class="rowlabel"></td>'+items.map(r=>`<td style="text-align:center"><a href="/detail.html?id=${r.id}"><span class="emoji">${EMOJI[r.category]}</span></a><div><button class="op del" style="color:var(--red);font-size:12.5px;font-weight:600;margin-top:6px" onclick="rm('${r.id}')">✕ ${LANG==='zh'?'移除':'Remove'}</button></div></td>`).join('')+'</tr>';
   rows.forEach(row=>{
+    if(DIFF_ONLY && !row.alwaysShow && row._uniform) return; // 隐藏相同行
     let best=-1;
     if(row.num){ best=bestIndex(items.map(r=>row.get(r)),row.num); }
     h+=`<tr><td class="rowlabel">${row.label}</td>`+items.map((r,i)=>{ let v=row.get(r); if(v==null||v==='')v='—'; return `<td class="${i===best?'cmp-best':''}">${v}${i===best?' ★':''}</td>`; }).join('')+'</tr>';
   });
+  // 剩余空位占位，引导继续添加
+  const slots=Math.max(0,4-items.length);
+  if(slots>0){
+    h+=`<tr><td class="rowlabel"></td><td class="cmp-slot" colspan="${items.length}"><a href="/catalog.html" class="slot-add"><span class="plus">＋</span> ${t('cmp_add')}</a></td></tr>`;
+  }
   h+='</table></div>';
   root.innerHTML=h; applyI18n();
 }
 function rm(id){ toggleCmp(id); render(); }
-async function init(){ renderChrome('compare'); await loadMeta(); applyI18n(); renderTray(); render(); document.addEventListener('langchange',render); }
+async function init(){
+  mergeFromUrl();
+  renderChrome('compare'); await loadMeta(); applyI18n(); renderTray();
+  const b=document.getElementById('diffBtn'); if(b) b.classList.toggle('on',DIFF_ONLY);
+  render();
+  document.addEventListener('langchange',render);
+}
 init();
 </script>
 </body>

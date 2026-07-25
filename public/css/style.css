@@ -323,6 +323,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 
 /* ===== Compare export ===== */
 .cmp-export{margin-left:auto}
+/* ===== Compare enhancements ===== */
+.cmp-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+#diffBtn.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.cmp-sub{margin:6px 0 0;font-size:13.5px;color:var(--muted)}
+.cmp-table td.cmp-best{background:color-mix(in srgb,var(--green) 13%,var(--surface));position:relative;color:var(--green);font-weight:800}
+.cmp-table td.cmp-best::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--green)}
+.cmp-slot{background:repeating-linear-gradient(45deg,var(--surface-2),var(--surface-2) 11px,var(--surface) 11px,var(--surface) 22px);text-align:center}
+.slot-add{display:inline-flex;align-items:center;gap:8px;color:var(--primary);font-weight:700;text-decoration:none;padding:18px 10px}
+.slot-add .plus{font-size:22px;line-height:1}
 
 /* ===== Toast ===== */
 .toast-box{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:300;display:flex;flex-direction:column;gap:10px;align-items:center;pointer-events:none}
