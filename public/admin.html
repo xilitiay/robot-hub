@@ -40,9 +40,17 @@
   </div>
 
   <div id="panelRobots">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+    <div class="admin-toolbar" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px">
+      <input id="fq" class="hero-search" style="flex:1;min-width:190px;padding:9px 14px;border:1px solid var(--line);border-radius:10px;font-size:14px" data-ph="search_robots" oninput="applyRobotFilters()">
+      <select id="fcat" class="sort-sel" onchange="applyRobotFilters()">
+        <option value="" data-i="all_categories"></option>
+      </select>
+      <select id="fcountry" class="sort-sel" onchange="applyRobotFilters()">
+        <option value="" data-i="all_countries"></option>
+      </select>
       <button class="btn btn-primary" onclick="openForm()" data-i="add_robot"></button>
     </div>
+    <div style="margin-bottom:10px;font-size:13px;color:var(--muted)"><span id="robotCount"></span></div>
     <div style="overflow:auto">
       <table class="admin-table" id="robotTable"><thead><tr>
         <th>Brand</th><th>Model</th><th>Category</th><th data-i="spec_country">Origin</th><th data-i="spec_payload">Payload</th><th data-i="spec_year">Year</th><th></th>
@@ -141,6 +149,9 @@ function fillSelects(){
   document.getElementById('f_category').innerHTML=C.map(c=>`<option value="${c.id}">${LANG==='zh'?c.zh:c.en}</option>`).join('');
   document.getElementById('f_autonomy').innerHTML=A.map(a=>`<option value="${a.id}">${LANG==='zh'?a.zh:a.en}</option>`).join('');
   document.getElementById('f_country').innerHTML=CO.map(([k,v])=>`<option value="${k}">${v.flag} ${LANG==='zh'?v.zh:v.en}</option>`).join('');
+  // 筛选下拉：分类 / 国家
+  document.getElementById('fcat').innerHTML='<option value="" data-i="all_categories"></option>'+C.map(c=>`<option value="${c.id}">${LANG==='zh'?c.zh:c.en}</option>`).join('');
+  document.getElementById('fcountry').innerHTML='<option value="" data-i="all_countries"></option>'+CO.map(([k,v])=>`<option value="${k}">${v.flag} ${LANG==='zh'?v.zh:v.en}</option>`).join('');
 }
 function switchTab(t){
   document.getElementById('tabRobots').classList.toggle('on',t==='robots');
@@ -150,11 +161,25 @@ function switchTab(t){
   if(t==='robots') loadRobots(); else loadRfq();
 }
 
+let ROBOTS=[];   // 全量缓存，用于客户端即时筛选
 async function loadRobots(){
-  const d=await api('/api/robots?limit=200');
+  const d=await api('/api/robots?limit=1000');
+  ROBOTS=d.items||[];
+  applyRobotFilters();
+}
+function applyRobotFilters(){
+  const q=(document.getElementById('fq').value||'').trim().toLowerCase();
+  const cat=document.getElementById('fcat').value;
+  const country=document.getElementById('fcountry').value;
   const catName=id=>{const c=(META.categories||[]).find(x=>x.id===id);return c?(LANG==='zh'?c.zh:c.en):id;};
+  const list=ROBOTS.filter(r=>{
+    if(cat && r.category!==cat) return false;
+    if(country && r.country!==country) return false;
+    if(q){ const hay=(r.brand+' '+(r.brandZh||'')+' '+r.model).toLowerCase(); if(!hay.includes(q)) return false; }
+    return true;
+  });
   const tb=document.querySelector('#robotTable tbody');
-  tb.innerHTML=d.items.map(r=>`<tr>
+  tb.innerHTML=list.map(r=>`<tr>
     <td><b>${r.brand}</b>${r.brandZh?'<br><span style="color:var(--muted);font-size:12px">'+r.brandZh+'</span>':''}</td>
     <td>${r.model}</td>
     <td><span class="tag cat" style="--c:var(--primary)">${catName(r.category)}</span></td>
@@ -163,6 +188,8 @@ async function loadRobots(){
     <td>${r.year||'—'}</td>
     <td><span class="op" onclick="openForm('${r.id}')" data-i="edit"></span><span class="op del" onclick="delRobot('${r.id}')" data-i="del"></span></td>
   </tr>`).join('');
+  const cnt=document.getElementById('robotCount');
+  if(cnt) cnt.textContent = LANG==='zh' ? `共 ${list.length} 款（库内 ${ROBOTS.length}）` : `${list.length} of ${ROBOTS.length} robots`;
   applyI18n();
 }
 async function loadRfq(){
