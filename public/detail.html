@@ -96,9 +96,8 @@ async function render(){
 function openRfq(){ document.getElementById('rfqMask').classList.add('show'); }
 function closeRfq(){ document.getElementById('rfqMask').classList.remove('show'); }
 async function submitRfq(){
-  if(STATIC_MODE){ alert(LANG==='zh'?'演示模式：部署完整服务端后支持在线询价。':'Demo mode: deploy the full server to enable RFQ.'); return; }
   const body={ robotId:id, name:val('f_name'), company:val('f_company'), email:val('f_email'), phone:val('f_phone'), message:val('f_msg') };
-  const res=await fetch('/api/rfq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
+  const res=await api('/api/rfq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   if(res.ok){ closeRfq(); toast(t('rfq_ok'),'ok'); ['f_name','f_company','f_email','f_phone','f_msg'].forEach(i=>document.getElementById(i).value=''); }
 }
 const val=(i)=>document.getElementById(i).value;

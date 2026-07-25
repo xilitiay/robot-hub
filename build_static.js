@@ -71,7 +71,7 @@ function copyDir(src, dst) {
 copyDir(path.join(__dirname, 'public'), DIST);
 
 // inject bundle script before app.js in each HTML
-const pages = ['index.html', 'catalog.html', 'detail.html', 'compare.html', 'brands.html'];
+const pages = ['index.html', 'catalog.html', 'detail.html', 'compare.html', 'brands.html', 'admin.html'];
 const re = /<script src=["']\/js\/app\.js["']><\/script>/;
 for (const pg of pages) {
   const f = path.join(DIST, pg);
@@ -80,9 +80,6 @@ for (const pg of pages) {
   html = html.replace(re, '<script src="/static-bundle.js"></script>\n<script src="/js/app.js"></script>');
   fs.writeFileSync(f, html, 'utf8');
 }
-// admin is a write-only console — drop it from the static build
-const adminF = path.join(DIST, 'admin.html');
-if (fs.existsSync(adminF)) fs.unlinkSync(adminF);
 
 console.log(`[static] built dist/ — robots:${robotsOut.length} brands:${brandsOut.length} cats:${categories.length}`);
 console.log(`[static] bundle size: ${(bundle.length/1024).toFixed(0)} KB`);

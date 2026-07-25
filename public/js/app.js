@@ -72,26 +72,111 @@ function debounce(fn, wait){ let t; return function(...a){ clearTimeout(t); t=se
 
 async function loadMeta(){ if(META) return META; META = await api('/api/meta'); return META; }
 // API 封装：静态模式读预渲染包；动态模式 fetch，失败兜底返回空结构，避免整页白屏
-const api = (path)=> STATIC_MODE ? staticApi(path) : fetch(path)
+const api = (path, opts)=> STATIC_MODE ? staticApi(path, opts) : fetch(path, opts)
   .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
   .catch(err=>{ console.error('[api] '+path, err); return { error:String(err.message||err), items:[], total:0, page:1, totalPages:1 }; });
 
+/* ---- Static-mode admin store (localStorage overlay) ----
+   让管理台在只读静态托管上也能工作：增删改写入本浏览器 localStorage，
+   并同步反映到产品库 / 品牌 / 对比页（它们都读同一覆盖层）。 */
+const ADMIN_OV_KEY = 'rh_admin_overlay';     // 机器人工作集（覆盖层）
+const ADMIN_RFQ_KEY = 'rh_admin_rfq';         // 询价记录
+const ADMIN_BASE_KEY = 'rh_admin_base_len';   // 基准数据条数（用于重建后同步）
+function _staticRobots(){
+  try {
+    const raw = localStorage.getItem(ADMIN_OV_KEY);
+    const base = localStorage.getItem(ADMIN_BASE_KEY);
+    if (raw && base && Number(base) === (window.ROBOTHUB_ROBOTS||[]).length) return JSON.parse(raw);
+  } catch(e){}
+  const seed = (window.ROBOTHUB_ROBOTS||[]).map(r=>({...r}));   // 首次使用，从打包数据初始化
+  try { localStorage.setItem(ADMIN_OV_KEY, JSON.stringify(seed)); localStorage.setItem(ADMIN_BASE_KEY, String(seed.length)); } catch(e){}
+  return seed;
+}
+function _saveStaticRobots(arr){ try { localStorage.setItem(ADMIN_OV_KEY, JSON.stringify(arr)); } catch(e){} }
+function _staticBrands(){
+  const M = window.ROBOTHUB_META || {};
+  const by = {};
+  _staticRobots().forEach(r=>{
+    if(!by[r.brand]) by[r.brand] = { brand:r.brand, brandZh:r.brandZh, country:r.country, c:0, cats:new Set() };
+    by[r.brand].c++; by[r.brand].cats.add(r.category);
+  });
+  return Object.values(by).map(b=>({ ...b, cats:[...b.cats], countryInfo:(M.countries&&M.countries[b.country])||null }))
+    .sort((a,b)=>b.c-a.c);
+}
+function _robotFromBody(body, id){
+  const M = window.ROBOTHUB_META || {};
+  const rid = id || (body.brand+'-'+body.model).toLowerCase().replace(/[^a-z0-9]+/g,'-');
+  return {
+    id: rid, brand: body.brand||'', brandZh: body.brandZh||'', model: body.model||'',
+    category: body.category||'', autonomy: body.autonomy||'', country: body.country||'',
+    payload: (body.payload===''||body.payload==null)?null:Number(body.payload),
+    reach: (body.reach===''||body.reach==null)?null:Number(body.reach),
+    dof: (body.dof===''||body.dof==null)?null:Number(body.dof),
+    weight: (body.weight===''||body.weight==null)?null:Number(body.weight),
+    price: (body.price===''||body.price==null)?null:Number(body.price),
+    priceText: body.priceText||'', year: (body.year===''||body.year==null)?null:Number(body.year),
+    descEn: body.descEn||'', descZh: body.descZh||'',
+    apps: Array.isArray(body.apps)?body.apps:(body.apps?String(body.apps).split(',').map(s=>s.trim()).filter(Boolean):[]),
+    featured: !!body.featured, views: 0,
+    countryInfo: (M.countries&&M.countries[body.country])||null
+  };
+}
+function staticAdminApi(path, opts={}){
+  const u = new URL(path, location.href);
+  const p = u.pathname;
+  const method = (opts.method||'GET').toUpperCase();
+  const body = opts.body ? JSON.parse(opts.body) : {};
+  if (p === '/api/admin/rfq' && method === 'GET') {
+    try { return Promise.resolve(JSON.parse(localStorage.getItem(ADMIN_RFQ_KEY)||'[]')); } catch(e){ return Promise.resolve([]); }
+  }
+  if (p === '/api/admin/robots' && method === 'POST') {
+    const robot = _robotFromBody(body, null);
+    const arr = _staticRobots(); arr.push(robot); _saveStaticRobots(arr);
+    return Promise.resolve({ ok:true, id: robot.id });
+  }
+  const mu = p.match(/^\/api\/admin\/robots\/(.+)$/);
+  if (mu) {
+    const id = decodeURIComponent(mu[1]);
+    const arr = _staticRobots();
+    if (method === 'PUT') {
+      const robot = _robotFromBody(body, id);
+      const i = arr.findIndex(r=>r.id===id);
+      if (i<0) return Promise.resolve({ ok:false, error:'not found' });
+      arr[i] = robot; _saveStaticRobots(arr); return Promise.resolve({ ok:true, id });
+    }
+    if (method === 'DELETE') {
+      _saveStaticRobots(arr.filter(r=>r.id!==id));
+      return Promise.resolve({ ok:true });
+    }
+  }
+  return Promise.resolve({ ok:false, error:'unknown' });
+}
+function staticRfqSubmit(body){
+  let list=[]; try { list=JSON.parse(localStorage.getItem(ADMIN_RFQ_KEY)||'[]'); } catch(e){}
+  const item = { id: (list.length?Math.max(0,...list.map(x=>x.id||0)):0)+1, ...body, createdAt: new Date().toISOString() };
+  list.push(item); try { localStorage.setItem(ADMIN_RFQ_KEY, JSON.stringify(list)); } catch(e){}
+  return Promise.resolve({ ok:true, id:item.id });
+}
+
 /* ---- Static (pre-rendered) mode: serve from bundled data instead of /api ---- */
-function staticApi(path){
+function staticApi(path, opts){
   const u = new URL(path, location.href);
   const q = Object.fromEntries(u.searchParams.entries());
   const p = u.pathname;
+  const method = ((opts&&opts.method)||'GET').toUpperCase();
+  const body = (opts&&opts.body) ? JSON.parse(opts.body) : {};
   if (p === '/api/meta') return Promise.resolve(window.ROBOTHUB_META || {});
+  if (p === '/api/rfq' && method === 'POST') return staticRfqSubmit(body);
   const m = p.match(/^\/api\/robots\/(.+)$/);
   if (m) {
     const id = decodeURIComponent(m[1]);
-    const r = (window.ROBOTHUB_ROBOTS||[]).find(x => x.id === id);
+    const r = _staticRobots().find(x => x.id === id);
     if (!r) return Promise.resolve({ error: 'not found' });
-    const related = (window.ROBOTHUB_ROBOTS||[]).filter(x => x.category === r.category && x.id !== id).slice(0, 3);
+    const related = _staticRobots().filter(x => x.category === r.category && x.id !== id).slice(0, 3);
     return Promise.resolve({ robot: r, related });
   }
   if (p === '/api/robots') {
-    let arr = (window.ROBOTHUB_ROBOTS||[]).slice();
+    let arr = _staticRobots().slice();
     if (q.category) arr = arr.filter(r => r.category === q.category);
     if (q.brand) arr = arr.filter(r => r.brand === q.brand);
     if (q.country) arr = arr.filter(r => r.country === q.country);
@@ -116,10 +201,10 @@ function staticApi(path){
     const totalPages = Math.max(1, Math.ceil(total / limit));
     return Promise.resolve({ items, total, page, totalPages });
   }
-  if (p === '/api/brands') return Promise.resolve(window.ROBOTHUB_BRANDS || []);
+  if (p === '/api/brands') return Promise.resolve(_staticBrands());
   if (p === '/api/compare') {
     const ids = (q.ids || '').split(',').filter(Boolean);
-    const items = (window.ROBOTHUB_ROBOTS||[]).filter(r => ids.includes(r.id));
+    const items = _staticRobots().filter(r => ids.includes(r.id));
     return Promise.resolve({ items });
   }
   return Promise.resolve({ error: 'unknown api' });

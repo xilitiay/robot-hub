@@ -252,6 +252,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .tab-bar{display:flex;gap:8px;margin-bottom:22px}
 .tab-bar button{padding:9px 18px;border-radius:10px;font-weight:600;font-size:14px;color:var(--muted);background:var(--surface);border:1px solid var(--line)}
 .tab-bar button.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+/* admin demo-mode banner (static deployment) */
+.demo-banner{background:var(--surface-2);border:1px solid var(--accent);
+  color:var(--ink-2);border-radius:12px;padding:11px 15px;font-size:13.5px;line-height:1.5;margin-bottom:18px}
+.demo-banner b{color:var(--accent)}
 
 /* ===== Footer ===== */
 .site-footer{background:#0f172a;color:#cbd5e1;padding:48px 0 28px;margin-top:40px}

@@ -32,6 +32,8 @@
     </div>
   </div>
 
+  <div id="demoBanner" class="demo-banner hide">🟡 <b>演示模式</b>：当前为静态部署，管理台改动仅保存在<strong>本浏览器</strong>（localStorage），不会写入服务器；刷新同浏览器可见，换设备/清缓存则丢失。产品库、品牌、对比页会实时反映这些改动。</div>
+
   <div class="tab-bar">
     <button id="tabRobots" class="on" onclick="switchTab('robots')" data-i="admin_robots"></button>
     <button id="tabRfq" onclick="switchTab('rfq')" data-i="admin_rfq"></button>
@@ -100,12 +102,23 @@ let TOKEN=localStorage.getItem(TOKEN_KEY)||'';
 let editingId=null;
 
 function adminFetch(path,opts={}){
+  if(STATIC_MODE) return staticAdminApi(path,opts);   // 静态演示模式：本地 localStorage 写
   return fetch(path,{...opts,headers:{'Content-Type':'application/json','X-Admin-Token':TOKEN,...(opts.headers||{})}}).then(r=>r.json());
 }
 function unlock(){
   const v=document.getElementById('tk').value.trim();
   TOKEN=v||TOKEN;
   if(!TOKEN){return;}
+  if(STATIC_MODE){
+    // 演示模式：静态托管无服务器，任意非空令牌即可解锁；所有改动存于本浏览器 localStorage
+    localStorage.setItem(TOKEN_KEY,TOKEN);
+    document.getElementById('gate').classList.add('hide');
+    document.getElementById('console').classList.remove('hide');
+    const who=document.getElementById('who'); if(who) who.textContent='🟡 Demo · 本地数据';
+    const banner=document.getElementById('demoBanner'); if(banner) banner.style.display='block';
+    boot();
+    return;
+  }
   // verify token by hitting rfq endpoint
   fetch('/api/admin/rfq',{headers:{'X-Admin-Token':TOKEN}}).then(r=>{
     if(r.status===401){ document.getElementById('gerr').style.display='block'; TOKEN=''; return; }
