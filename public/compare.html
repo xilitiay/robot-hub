@@ -203,10 +203,14 @@ function drawRadar(items){
       if(v==null||m.max===m.min) v=0.5; else v=(v-m.min)/(m.max-m.min);
       const a=-Math.PI/2+i*2*Math.PI/N; const x=cx+R*v*Math.cos(a), y=cy+R*v*Math.sin(a);
       const rawV=it[d.key]; const disp=(d.key==='price')?(it.priceText||rawV):(rawV==null?'—':rawV+(d.unit||''));
-      RADAR_PTS[idx].push({ x, y, label:d.label, disp, brand:LANG==='zh'?(it.brandZh||it.brand):it.brand, model:it.model });
+      RADAR_PTS[idx].push({ x, y, label:d.label, disp, brand:LANG==='zh'?(it.brandZh||it.brand):it.brand, model:it.model, color });
       i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
     ctx.closePath(); ctx.fillStyle=color+'30'; ctx.fill(); ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
   });
+  // 常驻顶点小圆点（提升悬停可读性，置于最上层）
+  RADAR_PTS.forEach((arr,idx)=>{ const color=RADAR_COLORS[idx%RADAR_COLORS.length];
+    arr.forEach(p=>{ ctx.beginPath(); ctx.arc(p.x,p.y,3.4,0,Math.PI*2); ctx.fillStyle=color; ctx.fill();
+      ctx.lineWidth=1.5; ctx.strokeStyle='#fff'; ctx.stroke(); }); });
   // 图例
   const lg=document.getElementById('radarLegend');
   if(lg) lg.innerHTML=items.map((it,idx)=>`<span class="rl"><i style="background:${RADAR_COLORS[idx%RADAR_COLORS.length]}"></i>${LANG==='zh'?(it.brandZh||it.brand):it.brand} ${it.model}</span>`).join('');
@@ -219,11 +223,16 @@ function drawRadar(items){
       const mx=(e.clientX-rect.left)*sx, my=(e.clientY-rect.top)*sy;
       let best=null, bd=16;
       RADAR_PTS.forEach(arr=>arr.forEach(p=>{ const dd=Math.hypot(p.x-mx,p.y-my); if(dd<bd){ bd=dd; best=p; } }));
+      drawRadar(items);  // 重绘（含常驻圆点），清除上一高亮
       if(best){
         tip.innerHTML=`<div class="rt-brand">${best.brand} ${best.model}</div><div class="rt-val">${best.label}：<b>${best.disp}</b></div>`;
         let lx=e.clientX+14, ty=e.clientY+14;
         if(lx+235>window.innerWidth) lx=e.clientX-235;
         tip.style.left=lx+'px'; tip.style.top=ty+'px'; tip.classList.add('on');
+        // 高亮命中点：实心点 + 外扩环
+        ctx.beginPath(); ctx.arc(best.x,best.y,6,0,Math.PI*2); ctx.fillStyle=best.color; ctx.fill();
+        ctx.lineWidth=2.5; ctx.strokeStyle='#fff'; ctx.stroke();
+        ctx.beginPath(); ctx.arc(best.x,best.y,9.5,0,Math.PI*2); ctx.strokeStyle=best.color+'66'; ctx.lineWidth=2; ctx.stroke();
       } else tip.classList.remove('on');
     };
     cv.onmouseleave=()=>tip.classList.remove('on');
