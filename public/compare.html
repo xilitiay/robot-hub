@@ -116,7 +116,7 @@ async function render(){
     const vals=items.map(r=>{ let v=row.get(r); return v==null?'':String(v); });
     row._uniform = vals.length>0 && vals.every(v=>v===vals[0]);
   });
-  let h='<div style="overflow-x:auto"><table class="cmp-table"><tr><th class="rowlabel"></th>'+items.map(r=>`<th draggable="true" data-id="${r.id}" ondragstart="onCmpDragStart(event,'${r.id}')" ondragover="onCmpDragOver(event)" ondrop="onCmpDrop(event,'${r.id}')">${r.model}<div style="font-weight:400;color:var(--muted);font-size:12.5px">${LANG==='zh'?(r.brandZh||r.brand):r.brand}</div><span class="drag-h" title="${t('drag_sort')}">⠿</span></th>`).join('')+'</tr>';
+  let h='<div style="overflow-x:auto"><table class="cmp-table"><tr><th class="rowlabel"></th>'+items.map(r=>`<th draggable="true" data-id="${r.id}" ondragstart="onCmpDragStart(event,'${r.id}')" ondragover="onCmpDragOver(event)" ondrop="onCmpDrop(event,'${r.id}')">${r.model}<div style="font-weight:400;color:var(--muted);font-size:12.5px">${LANG==='zh'?(r.brandZh||r.brand):r.brand}</div><span class="drag-h" title="${t('drag_sort')}">⠿</span><span class="ord-btns"><button class="ob" title="↑" onclick="moveCmp(event,'${r.id}',-1)">▲</button><button class="ob" title="↓" onclick="moveCmp(event,'${r.id}',1)">▼</button></span></th>`).join('')+'</tr>';
   h+='<tr><td class="rowlabel"></td>'+items.map(r=>`<td style="text-align:center"><a href="/detail.html?id=${r.id}"><span class="emoji">${EMOJI[r.category]}</span></a><div><button class="op del" style="color:var(--red);font-size:12.5px;font-weight:600;margin-top:6px" onclick="rm('${r.id}')">✕ ${LANG==='zh'?'移除':'Remove'}</button></div></td>`).join('')+'</tr>';
   rows.forEach(row=>{
     if(DIFF_ONLY && !row.alwaysShow && row._uniform) return; // 隐藏相同行
@@ -135,6 +135,7 @@ async function render(){
   if(items.length) drawRadar(items);
 }
 function rm(id){ toggleCmp(id); render(); }
+function moveCmp(ev,id,dir){ ev.stopPropagation(); const a=getCmp(); const i=a.indexOf(id); const j=i+dir; if(i<0||j<0||j>=a.length) return; const t=a[i]; a[i]=a[j]; a[j]=t; setCmp(a); render(); }
 /* ---- 拖拽排序 ---- */
 let DRAG_ID=null;
 function onCmpDragStart(e,id){ DRAG_ID=id; if(e.dataTransfer){ e.dataTransfer.effectAllowed='move'; } }
@@ -149,26 +150,37 @@ function onCmpDrop(e,id){
 }
 /* ---- 雷达图（原生 Canvas，零依赖） ---- */
 const RADAR_DIMS=[
-  { key:'payload', label:t('spec_payload') },
-  { key:'reach', label:t('spec_reach') },
-  { key:'dof', label:t('spec_dof') },
-  { key:'weight', label:t('spec_weight') },
-  { key:'year', label:t('spec_year') },
-  { key:'price', label:t('spec_price') },
+  { key:'payload', label:t('spec_payload'), dir:'max' },
+  { key:'reach', label:t('spec_reach'), dir:'max' },
+  { key:'dof', label:t('spec_dof'), dir:'max' },
+  { key:'weight', label:t('spec_weight'), dir:'min' },
+  { key:'year', label:t('spec_year'), dir:'max' },
+  { key:'price', label:t('spec_price'), dir:'min' },
 ];
+let RADAR_ON=(localStorage.getItem('cmp_radar_on')||'').split(',').filter(Boolean);
+if(!RADAR_ON.length) RADAR_ON=RADAR_DIMS.map(d=>d.key);
+function toggleRadarDim(key){
+  if(RADAR_ON.includes(key)){ if(RADAR_ON.length>1) RADAR_ON=RADAR_ON.filter(k=>k!==key); }
+  else RADAR_ON.push(key);
+  localStorage.setItem('cmp_radar_on', RADAR_ON.join(','));
+  drawRadar(CMP_ITEMS);
+}
 const RADAR_COLORS=['#4f46e5','#10b981','#f59e0b','#ef4444'];
 function buildRadar(items){
-  return `<div class="cmp-radar"><h3>${t('cmp_radar')}</h3>`+
+  const chips=RADAR_DIMS.map(d=>`<button class="dim-chip ${RADAR_ON.includes(d.key)?'on':''}" onclick="toggleRadarDim('${d.key}')">${d.label}${d.dir==='min'?' ↓':' ↑'}</button>`).join('');
+  return `<div class="cmp-radar"><h3>${t('cmp_radar')}</h3><div class="dim-chips">${chips}</div>`+
     `<canvas id="cmpRadar" width="640" height="640" style="width:100%;max-width:420px;height:auto;touch-action:none"></canvas>`+
     `<div class="radar-legend" id="radarLegend"></div></div>`;
 }
 function drawRadar(items){
+  if(!items||!items.length) return;
+  const DIMS=RADAR_DIMS.filter(d=>RADAR_ON.includes(d.key));
   const cv=document.getElementById('cmpRadar'); if(!cv) return;
   const ctx=cv.getContext&&cv.getContext('2d'); if(!ctx) return;
   const W=cv.width, H=cv.height, cx=W/2, cy=H/2, R=Math.min(W,H)/2-78;
-  const N=RADAR_DIMS.length;
-  const norm=items.map(it=>RADAR_DIMS.map(d=>{ const v=it[d.key]; return (v==null||isNaN(v))?null:v; }));
-  const mm=RADAR_DIMS.map((d,i)=>{ const vs=norm.map(a=>a[i]).filter(v=>v!=null); return { min:vs.length?Math.min(...vs):0, max:vs.length?Math.max(...vs):1 }; });
+  const N=DIMS.length; if(N<1) return;
+  const norm=items.map(it=>DIMS.map(d=>{ const v=it[d.key]; return (v==null||isNaN(v))?null:v; }));
+  const mm=DIMS.map((d,i)=>{ const vs=norm.map(a=>a[i]).filter(v=>v!=null); return { min:vs.length?Math.min(...vs):0, max:vs.length?Math.max(...vs):1 }; });
   ctx.clearRect(0,0,W,H);
   // 网格圈
   ctx.lineWidth=1; ctx.strokeStyle='rgba(120,130,160,.22)';
@@ -178,12 +190,12 @@ function drawRadar(items){
   ctx.fillStyle=muted; ctx.font='13px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
   for(let i=0;i<N;i++){ const a=-Math.PI/2+i*2*Math.PI/N; const x=cx+R*Math.cos(a), y=cy+R*Math.sin(a);
     ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(x,y); ctx.strokeStyle='rgba(120,130,160,.16)'; ctx.stroke();
-    ctx.fillText(RADAR_DIMS[i].label, cx+(R+30)*Math.cos(a), cy+(R+30)*Math.sin(a)); }
+    ctx.fillText(DIMS[i].label+(DIMS[i].dir==='min'?' ↓':' ↑'), cx+(R+34)*Math.cos(a), cy+(R+34)*Math.sin(a)); }
   // 每个机器人多边形
   items.forEach((it,idx)=>{
     const color=RADAR_COLORS[idx%RADAR_COLORS.length];
     ctx.beginPath();
-    RADAR_DIMS.forEach((d,i)=>{ const m=mm[i]; let v=norm[idx][i];
+    DIMS.forEach((d,i)=>{ const m=mm[i]; let v=norm[idx][i];
       if(v==null||m.max===m.min) v=0.5; else v=(v-m.min)/(m.max-m.min);
       const a=-Math.PI/2+i*2*Math.PI/N; const x=cx+R*v*Math.cos(a), y=cy+R*v*Math.sin(a); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
     ctx.closePath(); ctx.fillStyle=color+'30'; ctx.fill(); ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();

@@ -341,6 +341,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .radar-legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:2px}
 .radar-legend .rl{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 .radar-legend .rl i{width:12px;height:12px;border-radius:3px;display:inline-block}
+/* 维度切换 chips */
+.dim-chips{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 6px}
+.dim-chip{font-size:12.5px;padding:5px 11px;border:1px solid var(--line);background:#fff;border-radius:999px;color:var(--muted);cursor:pointer;transition:.15s}
+.dim-chip.on{background:color-mix(in srgb,var(--primary) 12%,#fff);color:var(--primary);border-color:var(--primary)}
+/* 上移/下移按钮 */
+.ord-btns{display:inline-flex;gap:2px;margin-left:5px;vertical-align:middle}
+.ord-btns .ob{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:1px solid var(--line);background:#fff;border-radius:5px;font-size:9px;line-height:1;color:var(--muted);cursor:pointer}
+.ord-btns .ob:hover{color:var(--primary);border-color:var(--primary)}
 
 /* ===== Toast ===== */
 .toast-box{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:300;display:flex;flex-direction:column;gap:10px;align-items:center;pointer-events:none}
