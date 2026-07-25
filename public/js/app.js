@@ -66,8 +66,15 @@ const EMOJI = { industrial:'🦾', cobot:'🤝', amr:'🛞', humanoid:'🧍', qu
 
 let META = null;
 const STATIC_MODE = !!window.ROBOTHUB_STATIC;   // set by static-bundle.js in the static build
+
+// 通用防抖工具（用于搜索、筛选等高频输入）
+function debounce(fn, wait){ let t; return function(...a){ clearTimeout(t); t=setTimeout(()=>fn.apply(this, a), wait||200); }; }
+
 async function loadMeta(){ if(META) return META; META = await api('/api/meta'); return META; }
-const api = (path)=> STATIC_MODE ? staticApi(path) : fetch(path).then(r=>r.json());
+// API 封装：静态模式读预渲染包；动态模式 fetch，失败兜底返回空结构，避免整页白屏
+const api = (path)=> STATIC_MODE ? staticApi(path) : fetch(path)
+  .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+  .catch(err=>{ console.error('[api] '+path, err); return { error:String(err.message||err), items:[], total:0, page:1, totalPages:1 }; });
 
 /* ---- Static (pre-rendered) mode: serve from bundled data instead of /api ---- */
 function staticApi(path){
@@ -155,8 +162,9 @@ function setupSearch(input, box){
     </a>`).join('');
     box.style.display='block';
   };
-  input.addEventListener('input', render);
-  input.addEventListener('focus', render);
+  const onType = debounce(render, 200);
+  input.addEventListener('input', onType);
+  input.addEventListener('focus', onType);
   input.addEventListener('keydown', e=>{ if(e.key==='Enter' && input.value.trim()){ location.href='/catalog.html?q='+encodeURIComponent(input.value.trim()); } });
   input.addEventListener('blur', ()=> setTimeout(()=>box.style.display='none', 180));
   box.addEventListener('mousedown', e=> e.preventDefault());

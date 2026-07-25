@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#4f46e5">
+<meta name="description" content="全球领先机器人制造商一览，按字母或国家浏览品牌、型号数量与产地。RobotHub。">
 <title>Brands · 品牌 — RobotHub</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
 <link rel="stylesheet" href="/css/style.css">
@@ -142,13 +144,15 @@ function renderBrands(){
   }
   applyI18n();
 }
-function filterBrands(v){ renderBrands(); }
+const _filterD = debounce(renderBrands, 180);
+function filterBrands(){ _filterD(); }   // 防抖，避免每次击键都全量重渲染
 async function init(){
   renderChrome('brands'); await loadMeta();
   CMAP=META.countries||{};
   document.getElementById('bsort').value=bsort;
   document.querySelectorAll('#bgroupSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===bgroup));
   ALL=await api('/api/brands');
+  if(!Array.isArray(ALL)) ALL=[];   // 接口异常时兜底为空，避免白屏
   renderBrands();
   applyI18n(); renderTray();
   document.addEventListener('langchange',renderBrands);

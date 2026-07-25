@@ -7,6 +7,14 @@ const url = require('url');
 const { initDb, categories, autonomyLevels, countries } = require('./db/schema.js');
 
 const db = initDb();
+
+// 基础安全响应头（演示级别；生产可加 CSP / HSTS）
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'SAMEORIGIN',
+  'Referrer-Policy': 'strict-origin-when-cross-origin'
+};
+
 const PORT = process.env.PORT || 3000;
 const PUBLIC = path.join(__dirname, 'public');
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'robothub-admin-2026';
@@ -21,7 +29,8 @@ const MIME = {
 function send(res, code, data, type='application/json; charset=utf-8') {
   res.writeHead(code, { 'Content-Type': type, 'Access-Control-Allow-Origin':'*',
     'Access-Control-Allow-Methods':'GET,POST,PUT,DELETE,OPTIONS',
-    'Access-Control-Allow-Headers':'Content-Type,X-Admin-Token' });
+    'Access-Control-Allow-Headers':'Content-Type,X-Admin-Token',
+    ...SECURITY_HEADERS });
   res.end(typeof data === 'string' ? data : JSON.stringify(data));
 }
 
@@ -61,9 +70,9 @@ function apiRobots(res, q) {
   if (q.autonomy) { where.push('autonomy = ?'); args.push(q.autonomy); }
   if (q.featured) { where.push('featured = 1'); }
   if (q.q) {
-    where.push('(LOWER(brand) LIKE ? OR LOWER(brandZh) LIKE ? OR LOWER(model) LIKE ? OR LOWER(descEn) LIKE ? OR descZh LIKE ?)');
     const t = '%' + String(q.q).toLowerCase() + '%';
-    args.push(t, '%'+q.q+'%', t, t, '%'+q.q+'%');
+    where.push('(LOWER(brand) LIKE ? OR LOWER(brandZh) LIKE ? OR LOWER(model) LIKE ? OR LOWER(descEn) LIKE ? OR LOWER(descZh) LIKE ?)');
+    args.push(t, t, t, t, t);
   }
   const wsql = where.length ? 'WHERE ' + where.join(' AND ') : '';
   let order = 'ORDER BY featured DESC, year DESC';
@@ -168,7 +177,8 @@ function serveStatic(req, res, pathname) {
 }
 function streamFile(res, file) {
   const ext = path.extname(file).toLowerCase();
-  res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+  res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream',
+    'Cache-Control': 'public, max-age=3600', ...SECURITY_HEADERS });
   fs.createReadStream(file).pipe(res);
 }
 
@@ -203,4 +213,9 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => console.log(`RobotHub running at http://localhost:${PORT}`));
+server.on('error', (e) => {
+  if (e.code === 'EADDRINUSE') console.error(`✗ Port ${PORT} is already in use. Set PORT env or free the port, then retry.`);
+  else console.error('Server error:', e);
+  process.exit(1);
+});
+server.listen(PORT, () => console.log(`✓ RobotHub running at http://localhost:${PORT}`));
