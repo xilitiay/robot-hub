@@ -332,6 +332,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .cmp-slot{background:repeating-linear-gradient(45deg,var(--surface-2),var(--surface-2) 11px,var(--surface) 11px,var(--surface) 22px);text-align:center}
 .slot-add{display:inline-flex;align-items:center;gap:8px;color:var(--primary);font-weight:700;text-decoration:none;padding:18px 10px}
 .slot-add .plus{font-size:22px;line-height:1}
+/* drag-to-reorder + radar */
+.cmp-table th[draggable="true"]{cursor:grab;position:relative}
+.cmp-table th[draggable="true"]:active{cursor:grabbing}
+.drag-h{display:inline-block;margin-top:5px;font-size:14px;color:var(--muted);user-select:none;opacity:.7}
+.cmp-radar{margin-bottom:26px;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.cmp-radar h3{font-size:15px;margin:0;color:var(--ink);font-weight:700}
+.radar-legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:2px}
+.radar-legend .rl{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.radar-legend .rl i{width:12px;height:12px;border-radius:3px;display:inline-block}
 
 /* ===== Toast ===== */
 .toast-box{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:300;display:flex;flex-direction:column;gap:10px;align-items:center;pointer-events:none}
