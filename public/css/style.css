@@ -97,6 +97,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .to-head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
 .to-head span[data-i="tag_overview"]{font-size:15px;font-weight:700;color:var(--ink-2)}
 .to-sub{font-size:12px;color:var(--muted)}
+.to-empty{font-size:13.5px;color:var(--muted);line-height:1.6}
+.to-empty span[data-i="tag_empty"]{color:var(--ink-2);font-weight:600}
 .to-list{display:flex;flex-wrap:wrap;gap:8px}
 .to-item{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--line);cursor:pointer;transition:.15s;max-width:100%}
 .to-item:hover{border-color:var(--primary)}

@@ -123,9 +123,11 @@ function renderFavTagBar(){
   const bar=document.getElementById('favTagBar');
   const tags=allFavTags();
   if(!tags.length){ bar.style.display='none'; bar.innerHTML=''; return; }
+  const counts=tagCounts();
+  const sorted=[...tags].sort((a,b)=> (counts[b]||0)-(counts[a]||0) || a.localeCompare(b));
   bar.style.display='flex';
   bar.innerHTML = `<span class="tag-chip ${FAV_TAG_FILTER===''?'on':''}" onclick="filterFavByTag('')" data-i="fav_group_all"></span>`
-    + tags.map(tg=>`<span class="tag-chip ${FAV_TAG_FILTER===tg?'on':''}" style="--dot-c:${favTagColor(tg)}" onclick="filterFavByTag('${escJs(tg)}')"><span class="dot"></span>${escHtml(tg)}<button class="chip-edit" title="${t('tag_edit')}" onclick="event.stopPropagation();openTagEditor('${escJs(tg)}')">✎</button></span>`).join('');
+    + sorted.map(tg=>`<span class="tag-chip ${FAV_TAG_FILTER===tg?'on':''}" style="--dot-c:${favTagColor(tg)}" onclick="filterFavByTag('${escJs(tg)}')"><span class="dot"></span>${escHtml(tg)}<button class="chip-edit" title="${t('tag_edit')}" onclick="event.stopPropagation();openTagEditor('${escJs(tg)}')">✎</button></span>`).join('');
   applyI18n();
 }
 
@@ -155,12 +157,19 @@ function tagCounts(){
 function renderTagOverview(){
   const box=document.getElementById('tagOverview');
   const tags=allFavTags();
-  if(!tags.length){ box.style.display='none'; box.innerHTML=''; return; }
   const counts=tagCounts();
+  if(!tags.length){
+    box.style.display='block';
+    box.innerHTML = `<div class="to-head"><span data-i="tag_overview"></span></div>`
+      + `<div class="to-empty"><span data-i="tag_empty"></span> <span data-i="tag_empty_sub"></span></div>`;
+    applyI18n();
+    return;
+  }
   box.style.display='block';
+  const sorted=[...tags].sort((a,b)=> (counts[b]||0)-(counts[a]||0) || a.localeCompare(b));
   box.innerHTML = `<div class="to-head"><span data-i="tag_overview"></span><span class="to-sub" data-i="tag_overview_sub"></span></div>`
     + `<div class="to-list">`
-    + tags.map(tg=>`<div class="to-item ${FAV_TAG_FILTER===tg?'on':''}" style="--dot-c:${favTagColor(tg)}" onclick="filterFavByTag('${escJs(tg)}')" title="${escHtml(tg)}">
+    + sorted.map(tg=>`<div class="to-item ${FAV_TAG_FILTER===tg?'on':''}" style="--dot-c:${favTagColor(tg)}" onclick="filterFavByTag('${escJs(tg)}')" title="${escHtml(tg)}">
         <span class="dot"></span>
         <span class="to-name">${escHtml(tg)}</span>
         <span class="to-count">${counts[tg]||0}</span>
