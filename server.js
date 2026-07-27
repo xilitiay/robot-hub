@@ -65,7 +65,11 @@ function apiMeta(res) {
 function apiRobots(res, q) {
   const where = [], args = [];
   if (q.category) { where.push('category = ?'); args.push(q.category); }
-  if (q.brand) { where.push('brand = ?'); args.push(q.brand); }
+  if (q.brand) {
+    const bs = String(q.brand).split(',').filter(Boolean);
+    if (bs.length === 1) { where.push('brand = ?'); args.push(bs[0]); }
+    else { where.push('brand IN (' + bs.map(() => '?').join(',') + ')'); args.push(...bs); }
+  }
   if (q.country) { where.push('country = ?'); args.push(q.country); }
   if (q.autonomy) { where.push('autonomy = ?'); args.push(q.autonomy); }
   if (q.featured) { where.push('featured = 1'); }

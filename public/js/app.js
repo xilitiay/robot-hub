@@ -15,6 +15,7 @@ const I18N = {
     rfq_status:'Status', status_pending:'Pending', status_done:'Processed', mark_done:'Mark processed', mark_pending:'Mark pending', filter_status:'Status', all_status:'All statuses', prev:'Prev', next:'Next', per_page:'Per page', page_info:'Page {p} of {n}', export_csv:'Export CSV', exp_robots:'Export robots', exp_rfq:'Export RFQ', exp_brands:'Export brands',
     theme_light:'Light', theme_dark:'Dark', search_ph:'Search robots, brands or models…',
     results:'results', all:'All',
+    load_more:'Load more', loading:'Loading…', loaded_all:'All {n} robots loaded', brand_sel:'{n} brands', compared:'Compared',
     compare:'Compare', compare_now:'Compare now', clear:'Clear', request_quote:'Request Quote', view_detail:'View details',
     spec_payload:'Payload', spec_reach:'Reach', spec_dof:'DOF', spec_weight:'Weight', spec_year:'Year', spec_speed:'Speed', spec_country:'Origin', spec_autonomy:'Autonomy', spec_category:'Category', spec_brand:'Brand', spec_price:'Price',
     applications:'Applications', related:'Related robots', back:'Back',
@@ -45,6 +46,7 @@ const I18N = {
     rfq_status:'状态', status_pending:'待处理', status_done:'已处理', mark_done:'标记已处理', mark_pending:'标记待处理', filter_status:'状态', all_status:'全部状态', prev:'上一页', next:'下一页', per_page:'每页', page_info:'第 {p} / {n} 页', export_csv:'导出 CSV', exp_robots:'导出机器人', exp_rfq:'导出询盘', exp_brands:'导出品牌',
     theme_light:'浅色', theme_dark:'深色', search_ph:'搜索机器人、品牌或型号…',
     results:'个结果', all:'全部',
+    load_more:'加载更多', loading:'加载中…', loaded_all:'已加载全部 {n} 款', brand_sel:'{n} 个品牌', compared:'已加入',
     compare:'对比', compare_now:'立即对比', clear:'清空', request_quote:'询价', view_detail:'查看详情',
     spec_payload:'负载', spec_reach:'臂展', spec_dof:'自由度', spec_weight:'重量', spec_year:'年份', spec_speed:'速度', spec_country:'产地', spec_autonomy:'自主度', spec_category:'类目', spec_brand:'品牌', spec_price:'价格',
     applications:'应用场景', related:'相关机器人', back:'返回',
@@ -197,7 +199,7 @@ function staticApi(path, opts){
   if (p === '/api/robots') {
     let arr = _staticRobots().slice();
     if (q.category) arr = arr.filter(r => r.category === q.category);
-    if (q.brand) arr = arr.filter(r => r.brand === q.brand);
+    if (q.brand) { const bs = String(q.brand).split(',').filter(Boolean); arr = arr.filter(r => bs.includes(r.brand)); }
     if (q.country) arr = arr.filter(r => r.country === q.country);
     if (q.autonomy) arr = arr.filter(r => r.autonomy === q.autonomy);
     if (q.featured) arr = arr.filter(r => r.featured);
@@ -246,7 +248,15 @@ function toggleCmp(id){
     setCmp(a);
     toast(LANG==='zh'?'已加入对比':'Added to compare','ok');
   }
-  document.querySelectorAll(`.cmp input[data-id="${id}"]`).forEach(c=>c.checked=getCmp().includes(id));
+  const on=getCmp().includes(id);
+  document.querySelectorAll(`.cmp input[data-id="${id}"]`).forEach(c=>c.checked=on);
+  document.querySelectorAll(`.cmp[data-id="${id}"]`).forEach(c=>c.classList.toggle('on',on));
+  document.querySelectorAll(`.cmp-btn[data-id="${id}"]`).forEach(c=>{ c.classList.toggle('on',on); c.textContent=(on?'✓ ':'+ ')+(on?t('compared'):t('compare')); });
+}
+function syncCmpBtn(btn){
+  const on=getCmp().includes(btn.dataset.id);
+  btn.classList.toggle('on',on);
+  btn.textContent=(on?'✓ ':'+ ')+(on?t('compared'):t('compare'));
 }
 
 /* ---- Language ---- */
@@ -362,7 +372,7 @@ function robotCard(r){
       <div class="specs">${specs.map(s=>`<span class="spec">${s}</span>`).join('')}</div>
       <div class="foot">
         <span class="price">${r.priceText||'—'}</span>
-        <label class="cmp"><input type="checkbox" data-id="${r.id}" ${cmp?'checked':''} onchange="toggleCmp('${r.id}')"> <span data-i="compare">${t('compare')}</span></label>
+        <label class="cmp" data-id="${r.id}"><input type="checkbox" data-id="${r.id}" ${cmp?'checked':''} onchange="toggleCmp('${r.id}')"> <span data-i="compare">${t('compare')}</span></label>
       </div>
     </div></div>`;
 }
@@ -386,7 +396,7 @@ function robotListRow(r){
       <div class="lspecs">${specs.join(' · ')}</div>
     </div>
     <div class="lprice">${r.priceText||'—'}</div>
-    <label class="cmp"><input type="checkbox" data-id="${r.id}" ${cmp?'checked':''} onchange="toggleCmp('${r.id}')"> <span data-i="compare">${t('compare')}</span></label>
+    <button type="button" class="cmp-btn ${cmp?'on':''}" data-id="${r.id}" onclick="toggleCmp('${r.id}');syncCmpBtn(this)">${cmp?'✓ '+t('compared'):'+ '+t('compare')}</button>
   </div>`;
 }
 function exportCsv(filename, header, rows){

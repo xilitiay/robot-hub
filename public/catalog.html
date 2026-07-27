@@ -31,7 +31,7 @@
           </div>
           <div>
             <span data-i="sort_by" style="font-size:13.5px;color:var(--muted);margin-right:6px"></span>
-            <select id="sort" onchange="state.sort=this.value;state.page=1;load()">
+            <select id="sort" onchange="state.sort=this.value;load(true)">
               <option value="featured" data-i="sort_featured"></option>
               <option value="year" data-i="sort_year"></option>
               <option value="payload" data-i="sort_payload"></option>
@@ -43,19 +43,23 @@
         </div>
       </div>
       <div class="robot-grid" id="grid"></div>
-      <div class="pager" id="pager"></div>
+      <div id="sentinel"></div>
+      <div id="footer"></div>
     </main>
   </div>
 </div>
 
 <script>
 const params=new URLSearchParams(location.search);
-const state={ category:params.get('category')||'', brand:params.get('brand')||'', country:params.get('country')||'',
+const _ub=params.get('brand');
+const state={ category:params.get('category')||'', brands:(_ub?_ub.split(',').filter(Boolean):[]), country:params.get('country')||'',
   autonomy:params.get('autonomy')||'', q:params.get('q')||'', featured:params.get('featured')||'',
   sort:params.get('sort')||'featured', page:1, limit:24,
   view:localStorage.getItem('cat_view')||'grid', brandQ:'' };
 let BRANDS=[];      // 品牌列表（含计数），init 时拉取一次
-let DATA=null;      // 最近一次接口结果，用于视图切换时免刷新重渲染
+let ALL=[];         // 已加载机器人（无限滚动累加）
+let DATA=null;      // 最近一次接口结果（total/hero 等）
+let TOTAL=0, loading=false, finished=false;
 
 function buildFilters(){
   const s=META.stats;
@@ -79,58 +83,80 @@ function renderBrandList(){
   const box=document.getElementById('brandList'); if(!box) return;
   const q=state.brandQ.trim().toLowerCase();
   const list=BRANDS.filter(b=>(b.brand&&b.brand.toLowerCase().includes(q))||(b.brandZh&&b.brandZh.toLowerCase().includes(q))).slice(0,60);
-  box.innerHTML=`<div class="filter-opt ${!state.brand?'on':''}" data-brand="" onclick="setF('brand',this.dataset.brand)"><span data-i="all"></span></div>`+
-    list.map(b=>`<div class="filter-opt ${state.brand===b.brand?'on':''}" data-brand="${b.brand.replace(/"/g,'&quot;')}" onclick="setF('brand',this.dataset.brand)"><span>${LANG==='zh'?(b.brandZh||b.brand):b.brand}</span><span class="n">${b.c||''}</span></div>`).join('');
+  const selN=state.brands.length;
+  box.innerHTML=`<div class="filter-opt ${!selN?'on':''}" data-brand="" onclick="setBrand('')"><span data-i="all"></span>${selN?`<span class="n">${selN}</span>`:''}</div>`+
+    list.map(b=>`<div class="filter-opt ${state.brands.includes(b.brand)?'on':''}" data-brand="${b.brand.replace(/"/g,'&quot;')}" onclick="setBrand(this.dataset.brand)"><span class="cbx">${state.brands.includes(b.brand)?'✓':''}</span><span>${LANG==='zh'?(b.brandZh||b.brand):b.brand}</span><span class="n">${b.c||''}</span></div>`).join('');
 }
 function onBrandSearch(v){ state.brandQ=v; renderBrandList(); }
-function setF(k,v){ state[k]=v; state.page=1; buildFilters(); load(); }
-function resetFilters(){ Object.assign(state,{category:'',brand:'',country:'',autonomy:'',q:'',featured:'',page:1,brandQ:''}); buildFilters(); load(); }
+function setBrand(b){
+  if(b===''){ state.brands=[]; }
+  else { const i=state.brands.indexOf(b); if(i>=0) state.brands.splice(i,1); else state.brands.push(b); }
+  state.page=1; buildFilters(); load(true);
+}
+function setF(k,v){ state[k]=v; state.page=1; buildFilters(); load(true); }
+function resetFilters(){ Object.assign(state,{category:'',brands:[],country:'',autonomy:'',q:'',featured:'',page:1,brandQ:''}); buildFilters(); load(true); }
 
-function setView(v){ state.view=v; localStorage.setItem('cat_view',v); updateViewBtns(); if(DATA) renderItems(); else load(); }
+function setView(v){ state.view=v; localStorage.setItem('cat_view',v); updateViewBtns(); renderItems(); }
 function updateViewBtns(){ document.querySelectorAll('#viewToggle .vt').forEach(b=>b.classList.toggle('on', b.dataset.v===state.view)); }
 
 function renderItems(){
   const grid=document.getElementById('grid');
-  if(!DATA) return;
+  if(!ALL.length){ grid.innerHTML=''; return; }
   grid.className='robot-grid'+(state.view==='list'?' list':'');
-  if(!DATA.items.length){ grid.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="e">🔍</div><h3 data-i="empty_title"></h3><p data-i="empty_sub"></p><button class="btn btn-primary" style="margin-top:18px" onclick="resetFilters()" data-i="reset"></button></div>`; applyI18n(); return; }
-  grid.innerHTML=state.view==='list'?DATA.items.map(robotListRow).join(''):DATA.items.map(robotCard).join('');
+  grid.innerHTML=state.view==='list'?ALL.map(robotListRow).join(''):ALL.map(robotCard).join('');
   applyI18n();
 }
 
-async function load(){
-  const qs=new URLSearchParams();
-  ['category','brand','country','autonomy','q','featured','sort','page','limit'].forEach(k=>{ if(state[k]) qs.set(k,state[k]); });
+async function load(reset){
+  if(loading) return;
+  if(reset){ state.page=1; ALL=[]; finished=false; }
+  loading=true; updateFooter();
   const grid=document.getElementById('grid');
-  grid.className='robot-grid'+(state.view==='list'?' list':'');
-  grid.innerHTML=Array(8).fill('<div class="skeleton"></div>').join('');
+  if(reset && !ALL.length) grid.innerHTML=Array(8).fill('<div class="skeleton"></div>').join('');
+  const qs=new URLSearchParams();
+  ['category','country','autonomy','q','featured','sort','page','limit'].forEach(k=>{ if(state[k]) qs.set(k,state[k]); });
+  if(state.brands.length) qs.set('brand', state.brands.join(','));
   const data=await api('/api/robots?'+qs.toString());
-  DATA=data;
+  DATA=data; TOTAL=data.total;
+  if(reset) ALL=data.items; else ALL=ALL.concat(data.items);
   document.getElementById('cnt').textContent=data.total;
-  document.getElementById('catSub').textContent=(state.brand?state.brand+' · ':'')+(state.q?('“'+state.q+'”'):'');
+  const bt=state.brands.length? (state.brands.length+' '+(LANG==='zh'?'个品牌':'brands')+' · ') : '';
+  document.getElementById('catSub').textContent=bt+(state.q?('“'+state.q+'”'):'');
   const ch=document.getElementById('catHero');
   if(state.category){ const c=META.categories.find(x=>x.id===state.category);
     ch.className='cat-hero cat-'+state.category; ch.style.display='flex';
     ch.innerHTML=`<div class="ico">${c.icon}</div><div><h2>${LANG==='zh'?c.zh:c.en}</h2><p>${LANG==='zh'?c.desc_zh:c.desc_en}</p></div><div class="cnt">${data.total} ${LANG==='zh'?'款':'models'}</div>`;
   } else { ch.style.display='none'; }
+  finished=(data.page>=data.pages);
+  loading=false;
   renderItems();
-  // pager
-  const pg=document.getElementById('pager'); const P=data.pages, cur=data.page;
-  if(P<=1){ pg.innerHTML=''; return; }
-  let h=`<button ${cur===1?'disabled':''} onclick="goPage(${cur-1})">‹</button>`;
-  for(let i=1;i<=P;i++){ if(i===1||i===P||Math.abs(i-cur)<=2){ h+=`<button class="${i===cur?'on':''}" onclick="goPage(${i})">${i}</button>`; } else if(Math.abs(i-cur)===3){ h+=`<button disabled>…</button>`; } }
-  h+=`<button ${cur===P?'disabled':''} onclick="goPage(${cur+1})">›</button>`;
-  pg.innerHTML=h;
+  updateFooter();
 }
-function goPage(p){ state.page=p; load(); window.scrollTo({top:0,behavior:'smooth'}); }
+function updateFooter(){
+  const f=document.getElementById('footer'); if(!f) return;
+  if(loading){ f.innerHTML='<div class="load-spin">⟳ '+t('loading')+'</div>'; return; }
+  if(finished){ f.innerHTML = ALL.length? '<div class="load-end">✓ '+t('loaded_all').replace('{n}',TOTAL)+'</div>' : ''; return; }
+  if(typeof IntersectionObserver==='undefined'){ f.innerHTML='<button class="load-more-btn" onclick="loadMore()">'+t('load_more')+'</button>'; }
+  else { f.innerHTML=''; }
+}
+function loadMore(){ if(loading||finished) return; state.page++; load(false); }
+
+let _io=null;
+function setupObserver(){
+  const sentinel=document.getElementById('sentinel');
+  if(!sentinel || typeof IntersectionObserver==='undefined') return;
+  _io=new IntersectionObserver((es)=>{ es.forEach(e=>{ if(e.isIntersecting) loadMore(); }); }, {rootMargin:'400px 0px'});
+  _io.observe(sentinel);
+}
 
 async function init(){
   renderChrome('catalog'); await loadMeta();
   BRANDS=await api('/api/brands');
   document.getElementById('sort').value=state.sort;
   updateViewBtns();
-  applyI18n(); renderTray(); buildFilters(); load();
-  document.addEventListener('langchange',()=>{ buildFilters(); load(); });
+  applyI18n(); renderTray(); buildFilters();
+  load(true); setupObserver();
+  document.addEventListener('langchange',()=>{ buildFilters(); load(true); });
 }
 init();
 </script>
