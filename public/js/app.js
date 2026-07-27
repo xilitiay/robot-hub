@@ -17,6 +17,7 @@ const I18N = {
     results:'results', all:'All',
     load_more:'Load more', loading:'Loading…', loaded_all:'All {n} robots loaded', brand_sel:'{n} brands', compared:'Compared',
     fav:'Favorite', fav_on:'Saved', fav_title:'My Favorites', fav_sub:'Robots you saved for later', recent:'Recently viewed', fav_empty:'No favorites yet', fav_empty_sub:'Tap the ★ on any robot to save it here.', browse:'Browse catalog', clear_fav:'Clear favorites',
+    add_all_cmp:'Add all to compare', fav_group_all:'All', tag_add_hint:'Add tag…',
     compare:'Compare', compare_now:'Compare now', clear:'Clear', request_quote:'Request Quote', view_detail:'View details',
     spec_payload:'Payload', spec_reach:'Reach', spec_dof:'DOF', spec_weight:'Weight', spec_year:'Year', spec_speed:'Speed', spec_country:'Origin', spec_autonomy:'Autonomy', spec_category:'Category', spec_brand:'Brand', spec_price:'Price',
     applications:'Applications', related:'Related robots', back:'Back',
@@ -48,6 +49,8 @@ const I18N = {
     theme_light:'浅色', theme_dark:'深色', search_ph:'搜索机器人、品牌或型号…',
     results:'个结果', all:'全部',
     load_more:'加载更多', loading:'加载中…', loaded_all:'已加载全部 {n} 款', brand_sel:'{n} 个品牌', compared:'已加入',
+    fav:'收藏', fav_on:'已收藏', fav_title:'我的收藏', fav_sub:'你保存下来稍后查看的机器人', recent:'最近浏览', fav_empty:'还没有收藏', fav_empty_sub:'点任意机器人上的 ★ 即可收藏到这里。', browse:'去产品库看看', clear_fav:'清空收藏',
+    add_all_cmp:'全部加入对比', fav_group_all:'全部', tag_add_hint:'添加标签…',
     compare:'对比', compare_now:'立即对比', clear:'清空', request_quote:'询价', view_detail:'查看详情',
     spec_payload:'负载', spec_reach:'臂展', spec_dof:'自由度', spec_weight:'重量', spec_year:'年份', spec_speed:'速度', spec_country:'产地', spec_autonomy:'自主度', spec_category:'类目', spec_brand:'品牌', spec_price:'价格',
     applications:'应用场景', related:'相关机器人', back:'返回',
@@ -275,6 +278,17 @@ function syncFav(id){
   const on=getFavs().includes(id);
   document.querySelectorAll(`.fav-btn[data-id="${id}"]`).forEach(b=>{ b.classList.toggle('on',on); b.textContent=(on?'★ ':'☆ ')+(on?t('fav_on'):t('fav')); });
 }
+/* ---- Favorite tags (grouping) ---- */
+const FAVTAG_KEY='rh_fav_tags';
+const getFavTags=()=>{ try{ return JSON.parse(localStorage.getItem(FAVTAG_KEY)||'{}'); }catch(e){ return {}; } };
+const setFavTags=(m)=>localStorage.setItem(FAVTAG_KEY,JSON.stringify(m));
+function allFavTags(){
+  const m=getFavTags(); const s=new Set();
+  Object.values(m).forEach(arr=>(arr||[]).forEach(t=>s.add(t)));
+  return [...s].sort();
+}
+function addFavTag(id,tag){ tag=(tag||'').trim(); if(!tag) return; const m=getFavTags(); const arr=m[id]||[]; if(!arr.includes(tag)){ arr.push(tag); m[id]=arr; setFavTags(m); } }
+function removeFavTag(id,tag){ const m=getFavTags(); if(m[id]){ m[id]=m[id].filter(t=>t!==tag); if(!m[id].length) delete m[id]; setFavTags(m); } }
 /* ---- Recently viewed ---- */
 const REC_KEY='rh_recent';
 const REC_MAX=12;
@@ -282,6 +296,20 @@ function pushRecent(id){
   let a=JSON.parse(localStorage.getItem(REC_KEY)||'[]').filter(x=>x!==id);
   a.unshift(id); a=a.slice(0,REC_MAX);
   localStorage.setItem(REC_KEY,JSON.stringify(a));
+}
+function getRecentIds(){ return JSON.parse(localStorage.getItem(REC_KEY)||'[]'); }
+/* ---- Batch add to compare ---- */
+function addAllToCmp(ids){
+  if(!ids||!ids.length) return;
+  let a=getCmp(); let added=0;
+  for(const id of ids){ if(!a.includes(id)){ if(a.length>=CMP_MAX) break; a.push(id); added++; } }
+  setCmp(a);
+  document.querySelectorAll('.cmp input').forEach(c=>{ if(c.dataset.id) c.checked=getCmp().includes(c.dataset.id); });
+  document.querySelectorAll('.cmp-btn').forEach(b=>syncCmpBtn(b));
+  document.querySelectorAll('.cmp[data-id]').forEach(c=>c.classList.toggle('on',getCmp().includes(c.dataset.id)));
+  renderTray();
+  toast(added ? (LANG==='zh'?`已加入 ${added} 款到对比`:`Added ${added} to compare`)
+              : (LANG==='zh'?'这些型号已在对比中':'Already in compare'),'ok');
 }
 
 /* ---- Language ---- */

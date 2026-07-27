@@ -73,6 +73,18 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .fav-hero p{color:var(--muted);font-size:15px;margin-top:8px}
 .fav-head h2{font-size:22px}
 .btn-sm{padding:7px 13px;font-size:13px}
+.fav-actions{display:flex;gap:8px;flex-wrap:wrap}
+/* favorites tag bar + card tag editor */
+.tag-bar{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 22px}
+.tag-chip{cursor:pointer;padding:6px 14px;border-radius:999px;font-size:13.5px;font-weight:600;background:var(--surface);border:1px solid var(--line);color:var(--muted);transition:.15s}
+.tag-chip:hover{border-color:var(--primary);color:var(--ink-2)}
+.tag-chip.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.fav-tagrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:0 16px 16px;margin-top:-4px}
+.ftag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600;background:color-mix(in srgb,var(--amber) 16%,var(--surface));color:var(--amber);border:1px solid color-mix(in srgb,var(--amber) 35%,transparent);cursor:pointer}
+.ftag b{font-weight:700;opacity:.7}
+.ftag:hover b{opacity:1}
+.ftag-add{border:1px dashed var(--line);border-radius:999px;padding:3px 10px;font-size:12px;width:96px;outline:none;background:transparent;color:var(--muted)}
+.ftag-add:focus{border-color:var(--primary);color:var(--ink-2)}
 
 /* ===== Category grid ===== */
 .cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}

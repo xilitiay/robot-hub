@@ -19,44 +19,100 @@
   </section>
 
   <section id="recentSection" style="margin-top:8px">
-    <div class="section-head"><h2 data-i="recent"></h2></div>
+    <div class="section-head">
+      <h2 data-i="recent"></h2>
+      <button class="btn btn-ghost btn-sm" id="recentAddCmp" onclick="addAllRecentToCmp()" data-i="add_all_cmp" style="display:none"></button>
+    </div>
     <div class="robot-grid" id="recentGrid"></div>
   </section>
 
   <section style="margin-top:34px">
     <div class="section-head fav-head">
       <h2 data-i="fav_title"></h2>
-      <button class="btn btn-ghost btn-sm" id="clearFav" onclick="clearFavs()" data-i="clear_fav" style="display:none"></button>
+      <div class="fav-actions">
+        <button class="btn btn-ghost btn-sm" id="favAddCmp" onclick="addAllFavsToCmp()" data-i="add_all_cmp" style="display:none"></button>
+        <button class="btn btn-ghost btn-sm" id="clearFav" onclick="clearFavs()" data-i="clear_fav" style="display:none"></button>
+      </div>
     </div>
+    <div class="tag-bar" id="favTagBar" style="display:none"></div>
     <div class="robot-grid" id="favGrid"></div>
   </section>
 </div>
 
 <script>
+let FAV_TAG_FILTER='';   // '' = 全部
+let FAV_ITEMS=[];
+
+const escJs = s => String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+const escHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function addAllFavsToCmp(){ addAllToCmp(getFavs()); }
+function addAllRecentToCmp(){ addAllToCmp(getRecentIds()); }
+
+function filterFavByTag(tag){ FAV_TAG_FILTER=tag; renderFav(); }
+
+function decorateFavCards(grid, items){
+  const cards=grid.querySelectorAll('.rcard');
+  cards.forEach((card,i)=>{
+    const r=items[i]; if(!r) return;
+    const tags=(getFavTags()[r.id]||[]);
+    const row=document.createElement('div');
+    row.className='fav-tagrow';
+    row.innerHTML = tags.map(t=>`<span class="ftag" onclick="removeFavTagFromCard('${r.id}','${escJs(t)}')">${escHtml(t)} <b>×</b></span>`).join('')
+      + `<input class="ftag-add" placeholder="${t('tag_add_hint')}" onkeydown="if(event.key==='Enter')addFavTagFromCard('${r.id}',this.value,this)">`;
+    card.appendChild(row);
+  });
+}
+function addFavTagFromCard(id,val,input){
+  const tag=(val||'').trim(); if(!tag) return;
+  addFavTag(id,tag);
+  if(input) input.value='';
+  renderFav();
+}
+function removeFavTagFromCard(id,tag){
+  removeFavTag(id,tag);
+  if(FAV_TAG_FILTER && !allFavTags().includes(FAV_TAG_FILTER)) FAV_TAG_FILTER='';
+  renderFav();
+}
+
+function renderFavTagBar(){
+  const bar=document.getElementById('favTagBar');
+  const tags=allFavTags();
+  if(!tags.length){ bar.style.display='none'; bar.innerHTML=''; return; }
+  bar.style.display='flex';
+  bar.innerHTML = `<span class="tag-chip ${FAV_TAG_FILTER===''?'on':''}" onclick="filterFavByTag('')" data-i="fav_group_all"></span>`
+    + tags.map(t=>`<span class="tag-chip ${FAV_TAG_FILTER===t?'on':''}" onclick="filterFavByTag('${escJs(t)}')">${escHtml(t)}</span>`).join('');
+  applyI18n();
+}
+
 async function renderFav(){
   const grid=document.getElementById('favGrid');
-  const ids=getFavs();
+  let ids=getFavs();
+  if(FAV_TAG_FILTER){ const m=getFavTags(); ids=ids.filter(id=>(m[id]||[]).includes(FAV_TAG_FILTER)); }
   const list=await Promise.all(ids.map(id=>api('/api/robots/'+id).then(d=>d.robot).catch(()=>null)));
   const items=list.filter(Boolean);
-  document.getElementById('clearFav').style.display=items.length?'inline-flex':'none';
+  FAV_ITEMS=items;
+  document.getElementById('clearFav').style.display=getFavs().length?'inline-flex':'none';
+  document.getElementById('favAddCmp').style.display=getFavs().length?'inline-flex':'none';
   grid.innerHTML = items.length
     ? items.map(robotCard).join('')
     : `<div class="empty" style="grid-column:1/-1"><div class="e">⭐</div><h3 data-i="fav_empty"></h3><p data-i="fav_empty_sub"></p><a class="btn btn-primary" href="/catalog.html" data-i="browse" style="margin-top:18px"></a></div>`;
   applyI18n();
+  renderFavTagBar();
+  if(items.length) decorateFavCards(grid, items);
 }
 async function renderRecent(){
   const box=document.getElementById('recentGrid'), sec=document.getElementById('recentSection');
-  const ids=JSON.parse(localStorage.getItem('rh_recent')||'[]');
+  const ids=getRecentIds();
+  document.getElementById('recentAddCmp').style.display=ids.length?'inline-flex':'none';
   if(!ids.length){ sec.style.display='none'; return; }
   sec.style.display='block';
   const list=await Promise.all(ids.map(id=>api('/api/robots/'+id).then(d=>d.robot).catch(()=>null)));
   const items=list.filter(Boolean);
-  box.innerHTML = items.length
-    ? items.map(robotCard).join('')
-    : '';
+  box.innerHTML = items.length ? items.map(robotCard).join('') : '';
   applyI18n();
 }
-function clearFavs(){ setFavs([]); renderFav(); }
+function clearFavs(){ setFavs([]); FAV_TAG_FILTER=''; renderFav(); }
 
 async function init(){
   renderChrome('favorites'); await loadMeta();
