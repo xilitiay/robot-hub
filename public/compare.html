@@ -23,6 +23,17 @@
       <button class="btn btn-primary cmp-export" id="expBtn" onclick="exportCsv()" style="display:none" data-i="cmp_export"></button>
     </div>
   </div>
+  <div class="cmp-filterbar">
+    <input id="cmpSearch" class="hero-search cmp-search" data-ph="cmp_search" oninput="applyCmpFilter()" placeholder="搜索参数…">
+    <div class="cmp-seg" id="cmpSeg">
+      <button class="seg on" data-g="all" onclick="setCmpGroup('all')" data-i="cmp_g_all"></button>
+      <button class="seg" data-g="spec" onclick="setCmpGroup('spec')" data-i="cmp_g_spec"></button>
+      <button class="seg" data-g="price" onclick="setCmpGroup('price')" data-i="cmp_g_price"></button>
+      <button class="seg" data-g="info" onclick="setCmpGroup('info')" data-i="cmp_g_info"></button>
+      <button class="seg" data-g="apps" onclick="setCmpGroup('apps')" data-i="cmp_g_apps"></button>
+    </div>
+    <span id="cmpRowCount" class="cmp-rowcount"></span>
+  </div>
   <div id="root"></div>
 </div>
 
@@ -36,17 +47,17 @@ function bestIndex(vals, dir){ // dir 'max' or 'min'
 }
 function buildRows(){
   return [
-    { key:'brand', label:t('spec_brand'), get:r=>LANG==='zh'?(r.brandZh||r.brand):r.brand, alwaysShow:true, csv:true },
-    { key:'category', label:t('spec_category'), get:r=>{const c=META.categories.find(x=>x.id===r.category);return c?(LANG==='zh'?c.zh:c.en):r.category;}, csv:true },
-    { key:'autonomy', label:t('spec_autonomy'), get:r=>{const a=META.autonomyLevels.find(x=>x.id===r.autonomy);return a?(LANG==='zh'?a.zh:a.en):r.autonomy;}, csv:true },
-    { key:'country', label:t('spec_country'), get:r=>r.countryInfo?(LANG==='zh'?r.countryInfo.zh:r.countryInfo.en):'—' },
-    { key:'payload', label:t('spec_payload')+' (kg)', get:r=>r.payload, num:'max' },
-    { key:'reach', label:t('spec_reach')+' (mm)', get:r=>r.reach, num:'max' },
-    { key:'dof', label:t('spec_dof'), get:r=>r.dof, num:'max' },
-    { key:'weight', label:t('spec_weight')+' (kg)', get:r=>r.weight, num:'min' },
-    { key:'year', label:t('spec_year'), get:r=>r.year, num:'max' },
-    { key:'price', label:t('spec_price'), get:r=>r.priceText },
-    { key:'apps', label:t('applications'), get:r=>(r.apps||[]).join(LANG==='zh'?'、':', '), csv:true },
+    { key:'brand', label:t('spec_brand'), get:r=>LANG==='zh'?(r.brandZh||r.brand):r.brand, alwaysShow:true, csv:true, group:'info' },
+    { key:'category', label:t('spec_category'), get:r=>{const c=META.categories.find(x=>x.id===r.category);return c?(LANG==='zh'?c.zh:c.en):r.category;}, csv:true, group:'info' },
+    { key:'autonomy', label:t('spec_autonomy'), get:r=>{const a=META.autonomyLevels.find(x=>x.id===r.autonomy);return a?(LANG==='zh'?a.zh:a.en):r.autonomy;}, csv:true, group:'info' },
+    { key:'country', label:t('spec_country'), get:r=>r.countryInfo?(LANG==='zh'?r.countryInfo.zh:r.countryInfo.en):'—', group:'info' },
+    { key:'payload', label:t('spec_payload')+' (kg)', get:r=>r.payload, num:'max', group:'spec' },
+    { key:'reach', label:t('spec_reach')+' (mm)', get:r=>r.reach, num:'max', group:'spec' },
+    { key:'dof', label:t('spec_dof'), get:r=>r.dof, num:'max', group:'spec' },
+    { key:'weight', label:t('spec_weight')+' (kg)', get:r=>r.weight, num:'min', group:'spec' },
+    { key:'year', label:t('spec_year'), get:r=>r.year, num:'max', group:'spec' },
+    { key:'price', label:t('spec_price'), get:r=>r.priceText, group:'price' },
+    { key:'apps', label:t('applications'), get:r=>(r.apps||[]).join(LANG==='zh'?'、':', '), csv:true, group:'apps' },
   ];
 }
 function csvCell(v){ if(v==null||v==='') v='—'; return '"'+String(v).replace(/"/g,'""')+'"'; }
@@ -68,7 +79,7 @@ function mergeFromUrl(){
     if(ids.length){
       let a=getCmp();
       ids.forEach(id=>{ if(!a.includes(id)) a.push(id); });
-      setCmp(a.slice(0,4));
+      setCmp(a.slice(0,CMP_MAX));
       history.replaceState(null,'',location.pathname);
     }
   }catch(e){}
@@ -77,7 +88,7 @@ function toggleDiff(){
   DIFF_ONLY=!DIFF_ONLY;
   localStorage.setItem('cmp_diff',DIFF_ONLY?'1':'0');
   const b=document.getElementById('diffBtn'); if(b) b.classList.toggle('on',DIFF_ONLY);
-  render();
+  drawTable();
 }
 function copyLink(){
   const ids=getCmp();
@@ -94,6 +105,8 @@ function fallbackCopy(text,cb){
   try{ document.execCommand('copy'); }catch(e){}
   ta.remove(); cb&&cb();
 }
+let CMP_Q='';        // 参数搜索词
+let CMP_GROUP='all'; // 分组筛选：all/spec/price/info/apps
 async function render(){
   const ids=getCmp();
   const root=document.getElementById('root');
@@ -102,23 +115,48 @@ async function render(){
     root.innerHTML=`<div class="empty"><div class="e">⚖️</div><p data-i="cmp_empty"></p><a class="btn btn-primary" style="margin-top:16px" href="/catalog.html" data-i="nav_catalog"></a></div>`;
     applyI18n(); expBtn.style.display='none';
     const sub=document.getElementById('cmpSub'); if(sub) sub.textContent='';
+    const cnt=document.getElementById('cmpRowCount'); if(cnt) cnt.textContent='';
     return;
   }
   const d=await api('/api/compare?ids='+ids.join(','));
   const order=getCmp(); const byId={}; (d.items||[]).forEach(r=>byId[r.id]=r);
   const items=order.map(id=>byId[id]).filter(Boolean); CMP_ITEMS=items;
-  expBtn.style.display=items.length?'inline-flex':'none';
   const sub=document.getElementById('cmpSub');
   if(sub) sub.textContent = LANG==='zh' ? `已选择 ${items.length} / ${CMP_MAX} 款` : `${items.length} of ${CMP_MAX} selected`;
+  // 雷达图只随 items 变化；搜索/筛选不影响它
+  root.innerHTML = (items.length? `<div id="cmpRadarWrap">${buildRadar(items)}</div>` : '') + '<div id="cmpTableWrap"></div>';
+  applyI18n();
+  if(items.length) drawRadar(items);
+  drawTable();
+}
+// 仅重绘对比表（搜索/筛选/只看差异触发，不重新请求数据）
+function drawTable(){
+  const items=CMP_ITEMS;
+  const wrap=document.getElementById('cmpTableWrap');
+  if(!wrap || !items || !items.length) return;
+  const expBtn=document.getElementById('expBtn');
+  expBtn.style.display=items.length?'inline-flex':'none';
   const rows=buildRows();
-  // 计算每行是否所有机器人取值一致（用于「只看差异」）
   rows.forEach(row=>{
     const vals=items.map(r=>{ let v=row.get(r); return v==null?'':String(v); });
     row._uniform = vals.length>0 && vals.every(v=>v===vals[0]);
+    let show=true;
+    if(!row.alwaysShow){
+      const groupMatch = CMP_GROUP==='all' || row.group===CMP_GROUP;
+      const sq=CMP_Q.trim().toLowerCase();
+      let textMatch=true;
+      if(sq){
+        const hay=(row.key+' '+row.label+' '+items.map(r=>{let v=row.get(r);return v==null?'':String(v);}).join(' ')).toLowerCase();
+        textMatch=hay.includes(sq);
+      }
+      show = groupMatch && textMatch;
+    }
+    row._show=show;
   });
   let h='<div class="cmp-scroll"><div class="cmp-scroll-hint" data-i="swipe_hint"></div><div style="overflow-x:auto"><table class="cmp-table"><tr><th class="rowlabel"></th>'+items.map(r=>`<th draggable="true" data-id="${r.id}" ondragstart="onCmpDragStart(event,'${r.id}')" ondragover="onCmpDragOver(event)" ondrop="onCmpDrop(event,'${r.id}')">${r.model}<div style="font-weight:400;color:var(--muted);font-size:12.5px">${LANG==='zh'?(r.brandZh||r.brand):r.brand}</div><span class="drag-h" title="${t('drag_sort')}">⠿</span><span class="ord-btns"><button class="ob" title="↑" onclick="moveCmp(event,'${r.id}',-1)">▲</button><button class="ob" title="↓" onclick="moveCmp(event,'${r.id}',1)">▼</button></span></th>`).join('')+'</tr>';
   h+='<tr><td class="rowlabel"></td>'+items.map(r=>`<td style="text-align:center"><a href="/detail.html?id=${r.id}"><span class="emoji">${EMOJI[r.category]}</span></a><div><button class="op del" style="color:var(--red);font-size:12.5px;font-weight:600;margin-top:6px" onclick="rm('${r.id}')">✕ ${LANG==='zh'?'移除':'Remove'}</button></div></td>`).join('')+'</tr>';
   rows.forEach(row=>{
+    if(!row._show) return;
     if(DIFF_ONLY && !row.alwaysShow && row._uniform) return; // 隐藏相同行
     let best=-1;
     if(row.num){ best=bestIndex(items.map(r=>row.get(r)),row.num); }
@@ -130,9 +168,24 @@ async function render(){
     h+=`<tr><td class="rowlabel"></td><td class="cmp-slot" colspan="${items.length}"><a href="/catalog.html" class="slot-add"><span class="plus">＋</span> ${t('cmp_add')}</a></td></tr>`;
   }
   h+='</table></div></div>';
-  root.innerHTML = (items.length? buildRadar(items):'') + h;
+  wrap.innerHTML=h;
   applyI18n();
-  if(items.length) drawRadar(items);
+  // 参数计数
+  const shown=rows.filter(r=>r._show).length;
+  const cnt=document.getElementById('cmpRowCount');
+  if(cnt) cnt.textContent = LANG==='zh' ? `显示 ${shown} / ${rows.length} 个参数` : `${shown} / ${rows.length} params`;
+}
+// 参数搜索
+function applyCmpFilter(){
+  const el=document.getElementById('cmpSearch');
+  CMP_Q = el? el.value : '';
+  drawTable();
+}
+// 分组筛选
+function setCmpGroup(g){
+  CMP_GROUP=g;
+  document.querySelectorAll('#cmpSeg .seg').forEach(b=>b.classList.toggle('on', b.dataset.g===g));
+  drawTable();
 }
 function rm(id){ toggleCmp(id); render(); }
 function moveCmp(ev,id,dir){ ev.stopPropagation(); const a=getCmp(); const i=a.indexOf(id); const j=i+dir; if(i<0||j<0||j>=a.length) return; const t=a[i]; a[i]=a[j]; a[j]=t; setCmp(a); render(); }
