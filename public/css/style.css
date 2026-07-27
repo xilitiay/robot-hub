@@ -80,11 +80,35 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .tag-chip:hover{border-color:var(--primary);color:var(--ink-2)}
 .tag-chip.on{background:var(--primary);border-color:var(--primary);color:#fff}
 .fav-tagrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:0 16px 16px;margin-top:-4px}
-.ftag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600;background:color-mix(in srgb,var(--amber) 16%,var(--surface));color:var(--amber);border:1px solid color-mix(in srgb,var(--amber) 35%,transparent);cursor:pointer}
+.ftag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600;background:color-mix(in srgb,var(--ftag-c,var(--amber)) 16%,var(--surface));color:var(--ftag-c,var(--amber));border:1px solid color-mix(in srgb,var(--ftag-c,var(--amber)) 35%,transparent);cursor:pointer;transition:.15s}
 .ftag b{font-weight:700;opacity:.7}
 .ftag:hover b{opacity:1}
 .ftag-add{border:1px dashed var(--line);border-radius:999px;padding:3px 10px;font-size:12px;width:96px;outline:none;background:transparent;color:var(--muted)}
 .ftag-add:focus{border-color:var(--primary);color:var(--ink-2)}
+/* tag bar chips: colored dot + inline edit button */
+.tag-chip{display:inline-flex;align-items:center;gap:6px}
+.tag-chip .dot{width:9px;height:9px;border-radius:50%;background:var(--dot-c,var(--primary));flex:none}
+.tag-chip .chip-edit{border:none;background:transparent;color:inherit;cursor:pointer;font-size:12px;padding:0 2px;opacity:.45;line-height:1}
+.tag-chip:hover .chip-edit{opacity:.85}
+.tag-chip.on .chip-edit{opacity:.8}
+.tag-chip .chip-edit:hover{opacity:1}
+/* tag editor modal */
+.modal-mask{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;width:min(420px,100%);box-shadow:0 24px 60px rgba(0,0,0,.25);animation:modalIn .18s ease}
+@keyframes modalIn{from{transform:translateY(8px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+.modal h3{margin:0 0 16px;font-size:19px}
+.modal-label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin:14px 0 7px}
+.modal-input{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:var(--bg);color:var(--ink);outline:none}
+.modal-input:focus{border-color:var(--primary)}
+.swatches{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.swatch{width:28px;height:28px;border-radius:8px;border:2px solid transparent;cursor:pointer;padding:0;position:relative}
+.swatch.on{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--primary)}
+.swatch.custom{display:inline-flex;align-items:center;justify-content:center;color:var(--muted);border:1px dashed var(--line);overflow:hidden;font-size:16px}
+.swatch.custom input{position:absolute;inset:0;opacity:0;cursor:pointer;border:none;padding:0}
+.modal-actions{display:flex;gap:8px;align-items:center;margin-top:22px}
+.modal-actions .spacer{flex:1}
+.btn-danger{color:#ef4444;border-color:color-mix(in srgb,#ef4444 40%,var(--line))}
+.btn-danger:hover{background:color-mix(in srgb,#ef4444 12%,transparent)}
 
 /* ===== Category grid ===== */
 .cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}

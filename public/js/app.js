@@ -17,7 +17,7 @@ const I18N = {
     results:'results', all:'All',
     load_more:'Load more', loading:'Loading…', loaded_all:'All {n} robots loaded', brand_sel:'{n} brands', compared:'Compared',
     fav:'Favorite', fav_on:'Saved', fav_title:'My Favorites', fav_sub:'Robots you saved for later', recent:'Recently viewed', fav_empty:'No favorites yet', fav_empty_sub:'Tap the ★ on any robot to save it here.', browse:'Browse catalog', clear_fav:'Clear favorites',
-    add_all_cmp:'Add all to compare', fav_group_all:'All', tag_add_hint:'Add tag…',
+    add_all_cmp:'Add all to compare', fav_group_all:'All', tag_add_hint:'Add tag…', tag_edit:'Edit tag', tag_new_name:'New name', tag_color:'Color', tag_delete:'Delete', tag_cancel:'Cancel', tag_save:'Save',
     compare:'Compare', compare_now:'Compare now', clear:'Clear', request_quote:'Request Quote', view_detail:'View details',
     spec_payload:'Payload', spec_reach:'Reach', spec_dof:'DOF', spec_weight:'Weight', spec_year:'Year', spec_speed:'Speed', spec_country:'Origin', spec_autonomy:'Autonomy', spec_category:'Category', spec_brand:'Brand', spec_price:'Price',
     applications:'Applications', related:'Related robots', back:'Back',
@@ -50,7 +50,7 @@ const I18N = {
     results:'个结果', all:'全部',
     load_more:'加载更多', loading:'加载中…', loaded_all:'已加载全部 {n} 款', brand_sel:'{n} 个品牌', compared:'已加入',
     fav:'收藏', fav_on:'已收藏', fav_title:'我的收藏', fav_sub:'你保存下来稍后查看的机器人', recent:'最近浏览', fav_empty:'还没有收藏', fav_empty_sub:'点任意机器人上的 ★ 即可收藏到这里。', browse:'去产品库看看', clear_fav:'清空收藏',
-    add_all_cmp:'全部加入对比', fav_group_all:'全部', tag_add_hint:'添加标签…',
+    add_all_cmp:'全部加入对比', fav_group_all:'全部', tag_add_hint:'添加标签…', tag_edit:'编辑标签', tag_new_name:'新名称', tag_color:'颜色', tag_delete:'删除', tag_cancel:'取消', tag_save:'保存',
     compare:'对比', compare_now:'立即对比', clear:'清空', request_quote:'询价', view_detail:'查看详情',
     spec_payload:'负载', spec_reach:'臂展', spec_dof:'自由度', spec_weight:'重量', spec_year:'年份', spec_speed:'速度', spec_country:'产地', spec_autonomy:'自主度', spec_category:'类目', spec_brand:'品牌', spec_price:'价格',
     applications:'应用场景', related:'相关机器人', back:'返回',
@@ -289,6 +289,35 @@ function allFavTags(){
 }
 function addFavTag(id,tag){ tag=(tag||'').trim(); if(!tag) return; const m=getFavTags(); const arr=m[id]||[]; if(!arr.includes(tag)){ arr.push(tag); m[id]=arr; setFavTags(m); } }
 function removeFavTag(id,tag){ const m=getFavTags(); if(m[id]){ m[id]=m[id].filter(t=>t!==tag); if(!m[id].length) delete m[id]; setFavTags(m); } }
+/* ---- Favorite tag colors + rename/delete (global) ---- */
+const FAVTAG_COLOR_KEY='rh_fav_tag_colors';
+const FAVTAG_DEFAULT_COLOR='#6366f1';
+const FAVTAG_PALETTE=['#6366f1','#3b82f6','#14b8a6','#22c55e','#eab308','#f97316','#ef4444','#ec4899','#a855f7','#64748b'];
+function getFavTagColors(){ try{ return JSON.parse(localStorage.getItem(FAVTAG_COLOR_KEY)||'{}'); }catch(e){ return {}; } }
+function favTagColor(tag){ return getFavTagColors()[tag] || FAVTAG_DEFAULT_COLOR; }
+function setFavTagColor(tag,color){ const m=getFavTagColors(); if(color) m[tag]=color; else delete m[tag]; localStorage.setItem(FAVTAG_COLOR_KEY,JSON.stringify(m)); }
+function renameFavTag(oldTag,newTag){
+  oldTag=(oldTag||'').trim(); newTag=(newTag||'').trim();
+  if(!oldTag||!newTag||oldTag===newTag) return false;
+  const m=getFavTags(); let changed=false;
+  for(const id in m){
+    if(m[id].includes(oldTag)){
+      let arr=m[id].filter(tg=>tg!==oldTag);
+      if(!arr.includes(newTag)) arr.push(newTag);
+      m[id]=arr; changed=true;
+    }
+  }
+  if(changed) setFavTags(m);
+  const cm=getFavTagColors();
+  if(cm[oldTag]!=null){ cm[newTag]=cm[oldTag]; delete cm[oldTag]; setFavTagColor(newTag,cm[newTag]); }
+  return changed;
+}
+function deleteFavTagGlobal(tag){
+  const m=getFavTags();
+  for(const id in m){ if(m[id].includes(tag)){ m[id]=m[id].filter(tg=>tg!==tag); if(!m[id].length) delete m[id]; } }
+  setFavTags(m);
+  const cm=getFavTagColors(); if(cm[tag]!=null){ delete cm[tag]; localStorage.setItem(FAVTAG_COLOR_KEY,JSON.stringify(cm)); }
+}
 /* ---- Recently viewed ---- */
 const REC_KEY='rh_recent';
 const REC_MAX=12;

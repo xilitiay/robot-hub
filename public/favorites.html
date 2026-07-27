@@ -39,8 +39,26 @@
   </section>
 </div>
 
+<div class="modal-mask" id="tagModal" style="display:none" onclick="if(event.target===this)closeTagEditor()">
+  <div class="modal tag-modal">
+    <h3 data-i="tag_edit"></h3>
+    <label class="modal-label" data-i="tag_new_name"></label>
+    <input id="tagNameInput" class="modal-input" maxlength="24" autocomplete="off">
+    <div class="modal-label" data-i="tag_color"></div>
+    <div class="swatches" id="tagSwatches"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm btn-danger" type="button" onclick="deleteFavTagGlobal(currentEditTag);closeTagEditor();renderFav()" data-i="tag_delete"></button>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="closeTagEditor()" data-i="tag_cancel"></button>
+      <button class="btn btn-primary btn-sm" type="button" onclick="saveTagEdit()" data-i="tag_save"></button>
+    </div>
+  </div>
+</div>
+
 <script>
-let FAV_TAG_FILTER='';   // '' = 全部
+let FAV_TAG_FILTER='';
+let currentEditTag='';
+let currentEditColor='';   // '' = 全部
 let FAV_ITEMS=[];
 
 const escJs = s => String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
@@ -58,7 +76,7 @@ function decorateFavCards(grid, items){
     const tags=(getFavTags()[r.id]||[]);
     const row=document.createElement('div');
     row.className='fav-tagrow';
-    row.innerHTML = tags.map(t=>`<span class="ftag" onclick="removeFavTagFromCard('${r.id}','${escJs(t)}')">${escHtml(t)} <b>×</b></span>`).join('')
+    row.innerHTML = tags.map(tg=>`<span class="ftag" style="--ftag-c:${favTagColor(tg)}" onclick="removeFavTagFromCard('${r.id}','${escJs(tg)}')" title="${t('tag_edit')}">${escHtml(tg)} <b>×</b></span>`).join('')
       + `<input class="ftag-add" placeholder="${t('tag_add_hint')}" onkeydown="if(event.key==='Enter')addFavTagFromCard('${r.id}',this.value,this)">`;
     card.appendChild(row);
   });
@@ -75,13 +93,38 @@ function removeFavTagFromCard(id,tag){
   renderFav();
 }
 
+/* ---- Tag editor (rename / recolor / delete) ---- */
+function openTagEditor(tag){
+  currentEditTag=tag; currentEditColor=favTagColor(tag);
+  document.getElementById('tagNameInput').value=tag;
+  renderTagSwatches();
+  document.getElementById('tagModal').style.display='flex';
+  setTimeout(()=>document.getElementById('tagNameInput').focus(),0);
+}
+function closeTagEditor(){ document.getElementById('tagModal').style.display='none'; }
+function setEditColor(c){ currentEditColor=c; renderTagSwatches(); }
+function renderTagSwatches(){
+  const box=document.getElementById('tagSwatches');
+  const sw=FAVTAG_PALETTE.map(c=>`<button type="button" class="swatch ${c===currentEditColor?'on':''}" style="background:${c}" onclick="setEditColor('${c}')"></button>`).join('');
+  const isCustom=currentEditColor && !FAVTAG_PALETTE.includes(currentEditColor);
+  const custom=`<label class="swatch custom ${isCustom?'on':''}" style="background:${isCustom?currentEditColor:'#fff'}"><input type="color" value="${isCustom?currentEditColor:FAVTAG_DEFAULT_COLOR}" oninput="setEditColor(this.value)"><span>＋</span></label>`;
+  box.innerHTML=sw+custom;
+}
+function saveTagEdit(){
+  const nv=document.getElementById('tagNameInput').value.trim();
+  const old=currentEditTag;
+  if(nv && nv!==old){ if(renameFavTag(old,nv)){ if(FAV_TAG_FILTER===old) FAV_TAG_FILTER=nv; } }
+  if(currentEditColor) setFavTagColor(nv||old, currentEditColor);
+  closeTagEditor(); renderFav();
+}
+
 function renderFavTagBar(){
   const bar=document.getElementById('favTagBar');
   const tags=allFavTags();
   if(!tags.length){ bar.style.display='none'; bar.innerHTML=''; return; }
   bar.style.display='flex';
   bar.innerHTML = `<span class="tag-chip ${FAV_TAG_FILTER===''?'on':''}" onclick="filterFavByTag('')" data-i="fav_group_all"></span>`
-    + tags.map(t=>`<span class="tag-chip ${FAV_TAG_FILTER===t?'on':''}" onclick="filterFavByTag('${escJs(t)}')">${escHtml(t)}</span>`).join('');
+    + tags.map(tg=>`<span class="tag-chip ${FAV_TAG_FILTER===tg?'on':''}" style="--dot-c:${favTagColor(tg)}" onclick="filterFavByTag('${escJs(tg)}')"><span class="dot"></span>${escHtml(tg)}<button class="chip-edit" title="${t('tag_edit')}" onclick="event.stopPropagation();openTagEditor('${escJs(tg)}')">✎</button></span>`).join('');
   applyI18n();
 }
 
