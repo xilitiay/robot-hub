@@ -367,7 +367,28 @@ function robotCard(r){
     </div></div>`;
 }
 
-/* ---- CSV export (UTF-8 BOM so Excel reads Chinese correctly) ---- */
+// 列表视图的紧凑行
+function robotListRow(r){
+  const cmp=getCmp().includes(r.id);
+  const specs=[];
+  if(r.payload!=null) specs.push(`${t('spec_payload')} ${r.payload}kg`);
+  if(r.reach!=null) specs.push(`${t('spec_reach')} ${r.reach}mm`);
+  if(r.dof!=null) specs.push(`${r.dof} ${t('spec_dof')}`);
+  if(r.weight!=null) specs.push(`${t('spec_weight')} ${r.weight}kg`);
+  if(r.year) specs.push(`${r.year}`);
+  const autoLabel=(META?.autonomyLevels||[]).find(a=>a.id===r.autonomy);
+  const catLabel=(META?.categories||[]).find(c=>c.id===r.category);
+  return `<div class="lrow cat-${r.category}">
+    <a class="lthumb" href="/detail.html?id=${r.id}"><span class="emoji">${EMOJI[r.category]||'🤖'}</span>${r.featured?`<span class="feat">★</span>`:''}</a>
+    <div class="linfo">
+      <div class="ltags"><span class="tag cat">${catLabel?(LANG==='zh'?catLabel.zh:catLabel.en):r.category}</span><span class="tag auto">${autoLabel?(LANG==='zh'?autoLabel.zh:autoLabel.en):r.autonomy}</span>${r.countryInfo?`<span class="lflag">${r.countryInfo.flag}</span>`:''}</div>
+      <div class="lname"><b>${LANG==='zh'?(r.brandZh||r.brand):r.brand}</b> ${r.model}</div>
+      <div class="lspecs">${specs.join(' · ')}</div>
+    </div>
+    <div class="lprice">${r.priceText||'—'}</div>
+    <label class="cmp"><input type="checkbox" data-id="${r.id}" ${cmp?'checked':''} onchange="toggleCmp('${r.id}')"> <span data-i="compare">${t('compare')}</span></label>
+  </div>`;
+}
 function exportCsv(filename, header, rows){
   const esc = v => {
     if (v == null) return '';

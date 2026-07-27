@@ -24,16 +24,22 @@
     <main class="catalog-main">
       <div class="toolbar">
         <div class="count"><b id="cnt">0</b> <span data-i="results"></span></div>
-        <div>
-          <span data-i="sort_by" style="font-size:13.5px;color:var(--muted);margin-right:6px"></span>
-          <select id="sort" onchange="state.sort=this.value;state.page=1;load()">
-            <option value="featured" data-i="sort_featured"></option>
-            <option value="year" data-i="sort_year"></option>
-            <option value="payload" data-i="sort_payload"></option>
-            <option value="price" data-i="sort_price"></option>
-            <option value="views" data-i="sort_views"></option>
-          <option value="name" data-i="sort_name"></option>
-          </select>
+        <div class="toolbar-right">
+          <div class="view-toggle" id="viewToggle">
+            <button class="vt" data-v="grid" onclick="setView('grid')" aria-label="网格视图" title="网格">▦</button>
+            <button class="vt" data-v="list" onclick="setView('list')" aria-label="列表视图" title="列表">▤</button>
+          </div>
+          <div>
+            <span data-i="sort_by" style="font-size:13.5px;color:var(--muted);margin-right:6px"></span>
+            <select id="sort" onchange="state.sort=this.value;state.page=1;load()">
+              <option value="featured" data-i="sort_featured"></option>
+              <option value="year" data-i="sort_year"></option>
+              <option value="payload" data-i="sort_payload"></option>
+              <option value="price" data-i="sort_price"></option>
+              <option value="views" data-i="sort_views"></option>
+            <option value="name" data-i="sort_name"></option>
+            </select>
+          </div>
         </div>
       </div>
       <div class="robot-grid" id="grid"></div>
@@ -46,7 +52,10 @@
 const params=new URLSearchParams(location.search);
 const state={ category:params.get('category')||'', brand:params.get('brand')||'', country:params.get('country')||'',
   autonomy:params.get('autonomy')||'', q:params.get('q')||'', featured:params.get('featured')||'',
-  sort:params.get('sort')||'featured', page:1, limit:24 };
+  sort:params.get('sort')||'featured', page:1, limit:24,
+  view:localStorage.getItem('cat_view')||'grid', brandQ:'' };
+let BRANDS=[];      // 品牌列表（含计数），init 时拉取一次
+let DATA=null;      // 最近一次接口结果，用于视图切换时免刷新重渲染
 
 function buildFilters(){
   const s=META.stats;
@@ -56,18 +65,47 @@ function buildFilters(){
   const cats=META.categories.map(c=>({id:c.id,label:LANG==='zh'?c.zh:c.en,n:s.catCounts[c.id]||0}));
   const autos=META.autonomyLevels.map(a=>({id:a.id,label:LANG==='zh'?a.zh:a.en}));
   const countries=Object.entries(META.countries).filter(([k])=>s.countryCounts[k]).sort((a,b)=>(s.countryCounts[b[0]]||0)-(s.countryCounts[a[0]]||0)).map(([k,v])=>({id:k,label:(v.flag+' '+(LANG==='zh'?v.zh:v.en)),n:s.countryCounts[k]}));
-  document.getElementById('filterBody').innerHTML=grp('f_category','category',cats)+grp('f_autonomy','autonomy',autos)+grp('f_country','country',countries);
+  const brandGroup=`<div class="filter-group brand-group">
+      <h4 data-i="f_brand"></h4>
+      <input class="brand-search" id="brandSearch" placeholder="${t('brand_search')}" value="${state.brandQ}" oninput="onBrandSearch(this.value)">
+      <div class="brand-list" id="brandList"></div>
+    </div>`;
+  document.getElementById('filterBody').innerHTML=grp('f_category','category',cats)+grp('f_autonomy','autonomy',autos)+grp('f_country','country',countries)+brandGroup;
+  applyI18n();
+  renderBrandList();
+}
+function renderBrandList(){
+  state.brandQ=(document.getElementById('brandSearch')||{}).value||state.brandQ||'';
+  const box=document.getElementById('brandList'); if(!box) return;
+  const q=state.brandQ.trim().toLowerCase();
+  const list=BRANDS.filter(b=>(b.brand&&b.brand.toLowerCase().includes(q))||(b.brandZh&&b.brandZh.toLowerCase().includes(q))).slice(0,60);
+  box.innerHTML=`<div class="filter-opt ${!state.brand?'on':''}" data-brand="" onclick="setF('brand',this.dataset.brand)"><span data-i="all"></span></div>`+
+    list.map(b=>`<div class="filter-opt ${state.brand===b.brand?'on':''}" data-brand="${b.brand.replace(/"/g,'&quot;')}" onclick="setF('brand',this.dataset.brand)"><span>${LANG==='zh'?(b.brandZh||b.brand):b.brand}</span><span class="n">${b.c||''}</span></div>`).join('');
+}
+function onBrandSearch(v){ state.brandQ=v; renderBrandList(); }
+function setF(k,v){ state[k]=v; state.page=1; buildFilters(); load(); }
+function resetFilters(){ Object.assign(state,{category:'',brand:'',country:'',autonomy:'',q:'',featured:'',page:1,brandQ:''}); buildFilters(); load(); }
+
+function setView(v){ state.view=v; localStorage.setItem('cat_view',v); updateViewBtns(); if(DATA) renderItems(); else load(); }
+function updateViewBtns(){ document.querySelectorAll('#viewToggle .vt').forEach(b=>b.classList.toggle('on', b.dataset.v===state.view)); }
+
+function renderItems(){
+  const grid=document.getElementById('grid');
+  if(!DATA) return;
+  grid.className='robot-grid'+(state.view==='list'?' list':'');
+  if(!DATA.items.length){ grid.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="e">🔍</div><h3 data-i="empty_title"></h3><p data-i="empty_sub"></p><button class="btn btn-primary" style="margin-top:18px" onclick="resetFilters()" data-i="reset"></button></div>`; applyI18n(); return; }
+  grid.innerHTML=state.view==='list'?DATA.items.map(robotListRow).join(''):DATA.items.map(robotCard).join('');
   applyI18n();
 }
-function setF(k,v){ state[k]=v; state.page=1; buildFilters(); load(); }
-function resetFilters(){ Object.assign(state,{category:'',brand:'',country:'',autonomy:'',q:'',featured:'',page:1}); buildFilters(); load(); }
 
 async function load(){
   const qs=new URLSearchParams();
   ['category','brand','country','autonomy','q','featured','sort','page','limit'].forEach(k=>{ if(state[k]) qs.set(k,state[k]); });
   const grid=document.getElementById('grid');
+  grid.className='robot-grid'+(state.view==='list'?' list':'');
   grid.innerHTML=Array(8).fill('<div class="skeleton"></div>').join('');
   const data=await api('/api/robots?'+qs.toString());
+  DATA=data;
   document.getElementById('cnt').textContent=data.total;
   document.getElementById('catSub').textContent=(state.brand?state.brand+' · ':'')+(state.q?('“'+state.q+'”'):'');
   const ch=document.getElementById('catHero');
@@ -75,9 +113,7 @@ async function load(){
     ch.className='cat-hero cat-'+state.category; ch.style.display='flex';
     ch.innerHTML=`<div class="ico">${c.icon}</div><div><h2>${LANG==='zh'?c.zh:c.en}</h2><p>${LANG==='zh'?c.desc_zh:c.desc_en}</p></div><div class="cnt">${data.total} ${LANG==='zh'?'款':'models'}</div>`;
   } else { ch.style.display='none'; }
-  if(!data.items.length){ grid.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="e">🔍</div><h3 data-i="empty_title"></h3><p data-i="empty_sub"></p><button class="btn btn-primary" style="margin-top:18px" onclick="resetFilters()" data-i="reset"></button></div>`; applyI18n(); document.getElementById('pager').innerHTML=''; return; }
-  grid.innerHTML=data.items.map(robotCard).join('');
-  applyI18n();
+  renderItems();
   // pager
   const pg=document.getElementById('pager'); const P=data.pages, cur=data.page;
   if(P<=1){ pg.innerHTML=''; return; }
@@ -90,7 +126,9 @@ function goPage(p){ state.page=p; load(); window.scrollTo({top:0,behavior:'smoot
 
 async function init(){
   renderChrome('catalog'); await loadMeta();
+  BRANDS=await api('/api/brands');
   document.getElementById('sort').value=state.sort;
+  updateViewBtns();
   applyI18n(); renderTray(); buildFilters(); load();
   document.addEventListener('langchange',()=>{ buildFilters(); load(); });
 }
