@@ -130,7 +130,7 @@ function renderFavTagBar(){
   const sorted=sortTagsByMode(tags,counts,TAG_SORT);
   bar.style.display='flex';
   bar.innerHTML = `<span class="tag-chip ${FAV_TAG_FILTER===''?'on':''}" onclick="filterFavByTag('')" data-i="fav_group_all"></span>`
-    + sorted.map(tg=>`<span class="tag-chip ${FAV_TAG_FILTER===tg?'on':''}" style="--dot-c:${favTagColor(tg)}" onclick="filterFavByTag('${escJs(tg)}')"><span class="dot"></span>${escHtml(tg)}<button class="chip-edit" title="${t('tag_edit')}" onclick="event.stopPropagation();openTagEditor('${escJs(tg)}')">✎</button></span>`).join('');
+    + sorted.map(tg=>`<span class="tag-chip ${FAV_TAG_FILTER===tg?'on':''}" style="--dot-c:${favTagColor(tg)}" onclick="filterFavByTag('${escJs(tg)}')" oncontextmenu="openTagCtx(event,'${escJs(tg)}')"><span class="dot"></span>${escHtml(tg)}<button class="chip-edit" title="${t('tag_edit')}" onclick="event.stopPropagation();openTagEditor('${escJs(tg)}')">✎</button></span>`).join('');
   applyI18n();
 }
 
