@@ -85,12 +85,12 @@ function addFavTagFromCard(id,val,input){
   const tag=(val||'').trim(); if(!tag) return;
   addFavTag(id,tag);
   if(input) input.value='';
-  renderFav();
+  rerenderFavSections();
 }
 function removeFavTagFromCard(id,tag){
   removeFavTag(id,tag);
   if(FAV_TAG_FILTER && !allFavTags().includes(FAV_TAG_FILTER)) FAV_TAG_FILTER='';
-  renderFav();
+  rerenderFavSections();
 }
 
 /* ---- Tag editor (rename / recolor / delete) ---- */
@@ -115,7 +115,7 @@ function saveTagEdit(){
   const old=currentEditTag;
   if(nv && nv!==old){ if(renameFavTag(old,nv)){ if(FAV_TAG_FILTER===old) FAV_TAG_FILTER=nv; } }
   if(currentEditColor) setFavTagColor(nv||old, currentEditColor);
-  closeTagEditor(); renderFav();
+  closeTagEditor(); rerenderFavSections();
 }
 
 function renderFavTagBar(){
@@ -154,7 +154,10 @@ async function renderRecent(){
   const items=list.filter(Boolean);
   box.innerHTML = items.length ? items.map(robotCard).join('') : '';
   applyI18n();
+  if(items.length) decorateFavCards(box, items);
 }
+// 重新渲染收藏与最近浏览两个区，保持标签增删改后两处一致
+async function rerenderFavSections(){ await Promise.all([renderFav(), renderRecent()]); }
 function clearFavs(){ setFavs([]); FAV_TAG_FILTER=''; renderFav(); }
 
 async function init(){
