@@ -458,4 +458,17 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
   .cmp-table tr{page-break-inside:avoid;break-inside:avoid}
   .cmp-best,.cmp-table td.cmp-best{color:#047857 !important;font-weight:800 !important;background:#ecfdf5 !important}
   .cmp-table td.cmp-best::after{background:#10b981 !important}
+  /* ===== 详情页规格书 ===== */
+  .container.detail{padding:0 !important}
+  .breadcrumb,.detail-actions,.detail-related,.modal-mask{display:none !important}
+  .detail-top{grid-template-columns:340px 1fr !important;gap:30px;align-items:start;page-break-inside:avoid}
+  .detail-media{height:300px !important}
+  .detail-info h1{font-size:28px}
+  .detail-info .desc{color:#0f172a !important}
+  .spec-table{border:1px solid #cbd5e1 !important;page-break-inside:auto}
+  .spec-table td{border-bottom:1px solid #e2e8f0 !important}
+  .spec-table tr{page-break-inside:avoid}
+  .spec-table td:first-child{color:#475569 !important}
+  .spec-bars,.app-chips{page-break-inside:avoid}
+  .spec-bars .fill{transition:none !important}
 }
