@@ -56,11 +56,14 @@
   </div>
 </div>
 
+<div class="ctx-menu" id="tagCtxMenu" style="display:none"></div>
+
 <script>
 let FAV_TAG_FILTER='';
 let currentEditTag='';
 let currentEditColor='';   // '' = 全部
 let FAV_ITEMS=[];
+let TAG_SORT='count_desc';  // count_desc | count_asc | name
 
 const escJs = s => String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 const escHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -124,7 +127,7 @@ function renderFavTagBar(){
   const tags=allFavTags();
   if(!tags.length){ bar.style.display='none'; bar.innerHTML=''; return; }
   const counts=tagCounts();
-  const sorted=[...tags].sort((a,b)=> (counts[b]||0)-(counts[a]||0) || a.localeCompare(b));
+  const sorted=sortTagsByMode(tags,counts,TAG_SORT);
   bar.style.display='flex';
   bar.innerHTML = `<span class="tag-chip ${FAV_TAG_FILTER===''?'on':''}" onclick="filterFavByTag('')" data-i="fav_group_all"></span>`
     + sorted.map(tg=>`<span class="tag-chip ${FAV_TAG_FILTER===tg?'on':''}" style="--dot-c:${favTagColor(tg)}" onclick="filterFavByTag('${escJs(tg)}')"><span class="dot"></span>${escHtml(tg)}<button class="chip-edit" title="${t('tag_edit')}" onclick="event.stopPropagation();openTagEditor('${escJs(tg)}')">✎</button></span>`).join('');
@@ -166,10 +169,11 @@ function renderTagOverview(){
     return;
   }
   box.style.display='block';
-  const sorted=[...tags].sort((a,b)=> (counts[b]||0)-(counts[a]||0) || a.localeCompare(b));
-  box.innerHTML = `<div class="to-head"><span data-i="tag_overview"></span><span class="to-sub" data-i="tag_overview_sub"></span></div>`
+  const sorted=sortTagsByMode(tags,counts,TAG_SORT);
+  const sortLabel=t('tag_sort_'+TAG_SORT);
+  box.innerHTML = `<div class="to-head"><span data-i="tag_overview"></span><span class="to-sub" data-i="tag_overview_sub"></span><button class="to-sort" type="button" title="${t('tag_sort')}" onclick="toggleTagSort()">⇅ ${escHtml(sortLabel)}</button></div>`
     + `<div class="to-list">`
-    + sorted.map(tg=>`<div class="to-item ${FAV_TAG_FILTER===tg?'on':''}" style="--dot-c:${favTagColor(tg)}" onclick="filterFavByTag('${escJs(tg)}')" title="${escHtml(tg)}">
+    + sorted.map(tg=>`<div class="to-item ${FAV_TAG_FILTER===tg?'on':''}" style="--dot-c:${favTagColor(tg)}" onclick="filterFavByTag('${escJs(tg)}')" oncontextmenu="openTagCtx(event,'${escJs(tg)}')" title="${escHtml(tg)}">
         <span class="dot"></span>
         <span class="to-name">${escHtml(tg)}</span>
         <span class="to-count">${counts[tg]||0}</span>
@@ -178,6 +182,32 @@ function renderTagOverview(){
     + `</div>`;
   applyI18n();
 }
+function sortTagsByMode(tags,counts,mode){
+  const arr=[...tags];
+  if(mode==='name') arr.sort((a,b)=>a.localeCompare(b));
+  else if(mode==='count_asc') arr.sort((a,b)=>(counts[a]||0)-(counts[b]||0)||a.localeCompare(b));
+  else arr.sort((a,b)=>(counts[b]||0)-(counts[a]||0)||a.localeCompare(b));
+  return arr;
+}
+function toggleTagSort(){
+  TAG_SORT = TAG_SORT==='count_desc' ? 'count_asc' : TAG_SORT==='count_asc' ? 'name' : 'count_desc';
+  renderTagOverview();
+  renderFavTagBar();
+}
+// 右键菜单：重命名 / 删除
+function openTagCtx(ev,tag){
+  ev.preventDefault(); ev.stopPropagation();
+  const m=document.getElementById('tagCtxMenu');
+  m.dataset.tag=tag;
+  m.innerHTML = `<button type="button" onclick="ctxRename()">✎ ${t('tag_edit')}</button>`
+    + `<button type="button" class="danger" onclick="ctxDelete()">🗑 ${t('tag_delete')}</button>`;
+  m.style.display='block';
+  const x=Math.min(ev.clientX, window.innerWidth-150), y=Math.min(ev.clientY, window.innerHeight-90);
+  m.style.left=x+'px'; m.style.top=y+'px';
+}
+function closeTagCtx(){ const m=document.getElementById('tagCtxMenu'); if(m) m.style.display='none'; }
+function ctxRename(){ const tg=document.getElementById('tagCtxMenu').dataset.tag; closeTagCtx(); openTagEditor(tg); }
+function ctxDelete(){ const tg=document.getElementById('tagCtxMenu').dataset.tag; closeTagCtx(); deleteFavTagGlobal(tg); renderFav(); }
 async function renderRecent(){
   const box=document.getElementById('recentGrid'), sec=document.getElementById('recentSection');
   const ids=getRecentIds();
@@ -200,6 +230,8 @@ async function init(){
   await Promise.all([renderFav(), renderRecent()]);
   document.addEventListener('langchange',()=>{ renderFav(); renderRecent(); });
   document.addEventListener('favchange',()=>{ renderFav(); });
+  document.addEventListener('click',closeTagCtx);
+  window.addEventListener('scroll',closeTagCtx,true);
 }
 init();
 </script>
