@@ -30,6 +30,7 @@
     <div class="section-head fav-head">
       <h2 data-i="fav_title"></h2>
       <div class="fav-actions">
+        <button class="btn btn-ghost btn-sm" id="selToggle" onclick="toggleSelectMode()" data-i="sel" style="display:none"></button>
         <button class="btn btn-ghost btn-sm" id="favAddCmp" onclick="addAllFavsToCmp()" data-i="add_all_cmp" style="display:none"></button>
         <button class="btn btn-ghost btn-sm" id="clearFav" onclick="clearFavs()" data-i="clear_fav" style="display:none"></button>
       </div>
@@ -37,6 +38,13 @@
     <div class="tag-bar" id="favTagBar" style="display:none"></div>
     <div class="tag-overview" id="tagOverview" style="display:none"></div>
     <div class="robot-grid" id="favGrid"></div>
+    <div class="batch-bar" id="batchBar" style="display:none">
+      <span class="bcount"><span data-i="batch_sel_prefix"></span><b id="batchCount">0</b><span data-i="batch_sel_suffix"></span></span>
+      <input id="batchTag" class="modal-input btag" maxlength="24" data-ph="batch_tag" onkeydown="if(event.key==='Enter')applyTagToSelected()">
+      <button class="btn btn-primary btn-sm" type="button" onclick="applyTagToSelected()" data-i="batch_apply"></button>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="selectAll()" data-i="batch_all"></button>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="clearSel()" data-i="batch_clear"></button>
+    </div>
   </section>
 </div>
 
@@ -47,6 +55,11 @@
     <input id="tagNameInput" class="modal-input" maxlength="24" autocomplete="off">
     <div class="modal-label" data-i="tag_color"></div>
     <div class="swatches" id="tagSwatches"></div>
+    <div class="modal-label" data-i="tag_merge"></div>
+    <div class="modal-merge">
+      <select id="mergeTarget" class="modal-input"></select>
+      <button class="btn btn-ghost btn-sm" id="mergeBtn" type="button" onclick="mergeTagInto()" data-i="tag_merge_btn"></button>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-sm btn-danger" type="button" onclick="deleteFavTagGlobal(currentEditTag);closeTagEditor();renderFav()" data-i="tag_delete"></button>
       <span class="spacer"></span>
@@ -102,8 +115,27 @@ function openTagEditor(tag){
   currentEditTag=tag; currentEditColor=favTagColor(tag);
   document.getElementById('tagNameInput').value=tag;
   renderTagSwatches();
+  const sel=document.getElementById('mergeTarget');
+  const others=allFavTags().filter(tg=>tg!==tag).sort((a,b)=>a.localeCompare(b));
+  sel.innerHTML = others.length ? others.map(tg=>`<option value="${escHtml(tg)}">${escHtml(tg)}</option>`).join('') : `<option value="" disabled>—</option>`;
+  document.getElementById('mergeBtn').disabled = !others.length;
   document.getElementById('tagModal').style.display='flex';
   setTimeout(()=>document.getElementById('tagNameInput').focus(),0);
+}
+function mergeTagInto(){
+  const from=currentEditTag;
+  const to=document.getElementById('mergeTarget').value;
+  if(!from||!to||from===to) return;
+  const m=getFavTags();
+  for(const id in m){
+    if(m[id].includes(from)){ const s=new Set(m[id]); s.delete(from); s.add(to); m[id]=[...s]; }
+  }
+  setFavTags(m);
+  const cm=getFavTagColors();
+  if(cm[from]!=null){ if(cm[to]==null) setFavTagColor(to, cm[from]); delete cm[from]; localStorage.setItem(FAVTAG_COLOR_KEY, JSON.stringify(cm)); }
+  if(FAV_TAG_FILTER===from) FAV_TAG_FILTER=to;
+  closeTagEditor(); rerenderFavSections();
+  toast(LANG==='zh'?`已将「${from}」合并到「${to}」`:`Merged "${from}" into "${to}"`,'ok');
 }
 function closeTagEditor(){ document.getElementById('tagModal').style.display='none'; }
 function setEditColor(c){ currentEditColor=c; renderTagSwatches(); }
@@ -150,6 +182,10 @@ async function renderFav(){
   renderFavTagBar();
   renderTagOverview();
   if(items.length) decorateFavCards(grid, items);
+  if(SEL_MODE && !getFavs().length){ SEL_MODE=false; SEL.clear(); }
+  markSelected();
+  document.getElementById('selToggle').style.display=getFavs().length?'inline-flex':'none';
+  syncSelUI();
 }
 // 统计每个标签被打在多少款机器人上（含收藏与最近浏览之外的标签）
 function tagCounts(){
@@ -219,16 +255,69 @@ async function renderRecent(){
   box.innerHTML = items.length ? items.map(robotCard).join('') : '';
   applyI18n();
   if(items.length) decorateFavCards(box, items);
+  markSelected();
 }
 // 重新渲染收藏与最近浏览两个区，保持标签增删改后两处一致
 async function rerenderFavSections(){ await Promise.all([renderFav(), renderRecent()]); }
 function clearFavs(){ setFavs([]); FAV_TAG_FILTER=''; renderFav(); }
 
+/* ---- 多选 + 批量打标签 ---- */
+let SEL_MODE=false;
+const SEL=new Set();
+function syncSelUI(){
+  const btn=document.getElementById('selToggle');
+  if(btn){ btn.classList.toggle('on',SEL_MODE); btn.textContent = SEL_MODE ? (LANG==='zh'?'完成':'Done') : (LANG==='zh'?'选择':'Select'); }
+  document.body.classList.toggle('selecting',SEL_MODE);
+  updateBatchBar();
+}
+function toggleSelectMode(){
+  SEL_MODE=!SEL_MODE;
+  if(!SEL_MODE) clearSel();
+  syncSelUI();
+}
+function onGridClick(e){
+  if(!SEL_MODE) return;
+  if(e.target.closest('button')||e.target.closest('a')||e.target.closest('input')) return;
+  const card=e.target.closest('.rcard'); if(!card) return;
+  const id=card.dataset.id; if(!id) return;
+  if(SEL.has(id)) SEL.delete(id); else SEL.add(id);
+  card.classList.toggle('sel',SEL.has(id));
+  updateBatchBar();
+}
+function selectAll(){
+  document.querySelectorAll('#favGrid .rcard, #recentGrid .rcard').forEach(c=>{ const id=c.dataset.id; if(id){ SEL.add(id); c.classList.add('sel'); } });
+  updateBatchBar();
+}
+function clearSel(){
+  SEL.clear();
+  document.querySelectorAll('.rcard.sel').forEach(c=>c.classList.remove('sel'));
+  updateBatchBar();
+}
+function markSelected(){
+  document.querySelectorAll('#favGrid .rcard, #recentGrid .rcard').forEach(c=>{ if(SEL.has(c.dataset.id)) c.classList.add('sel'); });
+}
+function updateBatchBar(){
+  const bar=document.getElementById('batchBar');
+  if(bar) bar.style.display = (SEL_MODE && SEL.size>0) ? 'flex' : 'none';
+  const cnt=document.getElementById('batchCount'); if(cnt) cnt.textContent=SEL.size;
+}
+function applyTagToSelected(){
+  const tag=document.getElementById('batchTag').value.trim(); if(!tag) return;
+  const n=SEL.size;
+  SEL.forEach(id=>addFavTag(id,tag));
+  document.getElementById('batchTag').value='';
+  clearSel();
+  rerenderFavSections();
+  toast(LANG==='zh'?`已给 ${n} 款打上「${tag}」`:`Tagged ${n} items with "${tag}"`,'ok');
+}
+
 async function init(){
   renderChrome('favorites'); await loadMeta();
   applyI18n(); renderTray();
   await Promise.all([renderFav(), renderRecent()]);
-  document.addEventListener('langchange',()=>{ renderFav(); renderRecent(); });
+  document.getElementById('favGrid').addEventListener('click',onGridClick);
+  document.getElementById('recentGrid').addEventListener('click',onGridClick);
+  document.addEventListener('langchange',()=>{ renderFav(); renderRecent(); if(SEL_MODE) syncSelUI(); });
   document.addEventListener('favchange',()=>{ renderFav(); });
   document.addEventListener('click',closeTagCtx);
   window.addEventListener('scroll',closeTagCtx,true);

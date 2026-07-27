@@ -17,7 +17,7 @@ const I18N = {
     results:'results', all:'All',
     load_more:'Load more', loading:'Loading…', loaded_all:'All {n} robots loaded', brand_sel:'{n} brands', compared:'Compared',
     fav:'Favorite', fav_on:'Saved', fav_title:'My Favorites', fav_sub:'Robots you saved for later', recent:'Recently viewed', fav_empty:'No favorites yet', fav_empty_sub:'Tap the ★ on any robot to save it here.', browse:'Browse catalog', clear_fav:'Clear favorites',
-    add_all_cmp:'Add all to compare', fav_group_all:'All', tag_add_hint:'Add tag…', tag_edit:'Edit tag', tag_new_name:'New name', tag_color:'Color', tag_delete:'Delete', tag_cancel:'Cancel', tag_save:'Save', tag_overview:'Tag overview', tag_overview_sub:'Sorted by count · click to filter · ✎ rename/recolor/delete', tag_empty:'No tags yet', tag_empty_sub:'Type a tag on any robot card to start grouping your favorites & recent views.', tag_sort:'Sort', tag_sort_count_desc:'Count ↓', tag_sort_count_asc:'Count ↑', tag_sort_name:'Name',
+    add_all_cmp:'Add all to compare', fav_group_all:'All', tag_add_hint:'Add tag…', tag_edit:'Edit tag', tag_new_name:'New name', tag_color:'Color', tag_delete:'Delete', tag_cancel:'Cancel', tag_save:'Save', tag_overview:'Tag overview', tag_overview_sub:'Sorted by count · click to filter · ✎ rename/recolor/delete', tag_empty:'No tags yet', tag_empty_sub:'Type a tag on any robot card to start grouping your favorites & recent views.', tag_sort:'Sort', tag_sort_count_desc:'Count ↓', tag_sort_count_asc:'Count ↑', tag_sort_name:'Name', sel:'Select', sel_done:'Done', tag_merge:'Merge into', tag_merge_btn:'Merge', batch_tag:'Tag name', batch_apply:'Apply tag', batch_all:'Select all', batch_clear:'Clear', batch_sel_prefix:'Selected ', batch_sel_suffix:' items',
     compare:'Compare', compare_now:'Compare now', clear:'Clear', request_quote:'Request Quote', view_detail:'View details',
     spec_payload:'Payload', spec_reach:'Reach', spec_dof:'DOF', spec_weight:'Weight', spec_year:'Year', spec_speed:'Speed', spec_country:'Origin', spec_autonomy:'Autonomy', spec_category:'Category', spec_brand:'Brand', spec_price:'Price',
     applications:'Applications', related:'Related robots', back:'Back',
@@ -50,7 +50,7 @@ const I18N = {
     results:'个结果', all:'全部',
     load_more:'加载更多', loading:'加载中…', loaded_all:'已加载全部 {n} 款', brand_sel:'{n} 个品牌', compared:'已加入',
     fav:'收藏', fav_on:'已收藏', fav_title:'我的收藏', fav_sub:'你保存下来稍后查看的机器人', recent:'最近浏览', fav_empty:'还没有收藏', fav_empty_sub:'点任意机器人上的 ★ 即可收藏到这里。', browse:'去产品库看看', clear_fav:'清空收藏',
-    add_all_cmp:'全部加入对比', fav_group_all:'全部', tag_add_hint:'添加标签…', tag_edit:'编辑标签', tag_new_name:'新名称', tag_color:'颜色', tag_delete:'删除', tag_cancel:'取消', tag_save:'保存', tag_overview:'标签概览', tag_overview_sub:'按数量排序 · 点击筛选 · ✎ 改名/换色/删除', tag_empty:'还没有标签', tag_empty_sub:'在任意机器人卡片的标签栏输入文字即可归类收藏与最近浏览。', tag_sort:'排序', tag_sort_count_desc:'数量 ↓', tag_sort_count_asc:'数量 ↑', tag_sort_name:'名称',
+    add_all_cmp:'全部加入对比', fav_group_all:'全部', tag_add_hint:'添加标签…', tag_edit:'编辑标签', tag_new_name:'新名称', tag_color:'颜色', tag_delete:'删除', tag_cancel:'取消', tag_save:'保存', tag_overview:'标签概览', tag_overview_sub:'按数量排序 · 点击筛选 · ✎ 改名/换色/删除', tag_empty:'还没有标签', tag_empty_sub:'在任意机器人卡片的标签栏输入文字即可归类收藏与最近浏览。', tag_sort:'排序', tag_sort_count_desc:'数量 ↓', tag_sort_count_asc:'数量 ↑', tag_sort_name:'名称', sel:'选择', sel_done:'完成', tag_merge:'合并到', tag_merge_btn:'合并', batch_tag:'标签名', batch_apply:'打标签', batch_all:'全选', batch_clear:'清空', batch_sel_prefix:'已选 ', batch_sel_suffix:' 项',
     compare:'对比', compare_now:'立即对比', clear:'清空', request_quote:'询价', view_detail:'查看详情',
     spec_payload:'负载', spec_reach:'臂展', spec_dof:'自由度', spec_weight:'重量', spec_year:'年份', spec_speed:'速度', spec_country:'产地', spec_autonomy:'自主度', spec_category:'类目', spec_brand:'品牌', spec_price:'价格',
     applications:'应用场景', related:'相关机器人', back:'返回',
@@ -440,7 +440,7 @@ function robotCard(r){
   if(r.dof!=null) specs.push(`${r.dof} ${t('spec_dof')}`);
   const autoLabel=(META?.autonomyLevels||[]).find(a=>a.id===r.autonomy);
   const catLabel=(META?.categories||[]).find(c=>c.id===r.category);
-  return `<div class="rcard cat-${r.category}">
+  return `<div class="rcard cat-${r.category}" data-id="${r.id}">
     <button type="button" class="fav-btn ${fav?'on':''}" data-id="${r.id}" onclick="toggleFav('${r.id}')" aria-label="${t('fav')}" title="${t('fav')}">${fav?'★':'☆'}</button>
     <a class="thumb" href="/detail.html?id=${r.id}">
       <span class="watermark">${brandInitials(r.brand)}</span>
