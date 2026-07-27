@@ -105,8 +105,10 @@ function fallbackCopy(text,cb){
   try{ document.execCommand('copy'); }catch(e){}
   ta.remove(); cb&&cb();
 }
-let CMP_Q='';        // 参数搜索词
-let CMP_GROUP='all'; // 分组筛选：all/spec/price/info/apps
+const CMP_GROUPS=['all','spec','price','info','apps'];
+let CMP_Q = localStorage.getItem('cmp_q') || '';        // 参数搜索词（持久化）
+let CMP_GROUP = localStorage.getItem('cmp_group') || 'all'; // 分组筛选（持久化）
+if(!CMP_GROUPS.includes(CMP_GROUP)) CMP_GROUP='all';
 async function render(){
   const ids=getCmp();
   const root=document.getElementById('root');
@@ -179,13 +181,21 @@ function drawTable(){
 function applyCmpFilter(){
   const el=document.getElementById('cmpSearch');
   CMP_Q = el? el.value : '';
+  try{ localStorage.setItem('cmp_q', CMP_Q); }catch(e){}
   drawTable();
 }
 // 分组筛选
 function setCmpGroup(g){
   CMP_GROUP=g;
+  try{ localStorage.setItem('cmp_group', g); }catch(e){}
   document.querySelectorAll('#cmpSeg .seg').forEach(b=>b.classList.toggle('on', b.dataset.g===g));
   drawTable();
+}
+// 页面加载时恢复搜索/分组 UI 状态
+function restoreCmpFilterUI(){
+  const el=document.getElementById('cmpSearch');
+  if(el && CMP_Q) el.value=CMP_Q;
+  document.querySelectorAll('#cmpSeg .seg').forEach(b=>b.classList.toggle('on', b.dataset.g===CMP_GROUP));
 }
 function rm(id){ toggleCmp(id); render(); }
 function moveCmp(ev,id,dir){ ev.stopPropagation(); const a=getCmp(); const i=a.indexOf(id); const j=i+dir; if(i<0||j<0||j>=a.length) return; const t=a[i]; a[i]=a[j]; a[j]=t; setCmp(a); render(); }
@@ -295,6 +305,7 @@ async function init(){
   mergeFromUrl();
   renderChrome('compare'); await loadMeta(); applyI18n(); renderTray();
   const b=document.getElementById('diffBtn'); if(b) b.classList.toggle('on',DIFF_ONLY);
+  restoreCmpFilterUI();
   render();
   document.addEventListener('langchange',render);
 }
