@@ -1,7 +1,7 @@
 /* ===== RobotHub shared frontend (i18n + API + components) ===== */
 const I18N = {
   en: {
-    nav_home:'Home', nav_catalog:'Catalog', nav_brands:'Brands', nav_compare:'Compare', nav_admin:'Admin',
+    nav_home:'Home', nav_catalog:'Catalog', nav_brands:'Brands', nav_compare:'Compare', nav_fav:'Favorites', nav_admin:'Admin',
     site_tag:'The Global Robot Directory',
     hero_title:'Discover, compare & research every robot on Earth',
     hero_sub:'The world\'s most comprehensive robot product database — industrial arms, cobots, humanoids, AMRs, medical & service robots by specs, price and autonomy.',
@@ -16,6 +16,7 @@ const I18N = {
     theme_light:'Light', theme_dark:'Dark', search_ph:'Search robots, brands or models…',
     results:'results', all:'All',
     load_more:'Load more', loading:'Loading…', loaded_all:'All {n} robots loaded', brand_sel:'{n} brands', compared:'Compared',
+    fav:'Favorite', fav_on:'Saved', fav_title:'My Favorites', fav_sub:'Robots you saved for later', recent:'Recently viewed', fav_empty:'No favorites yet', fav_empty_sub:'Tap the ★ on any robot to save it here.', browse:'Browse catalog', clear_fav:'Clear favorites',
     compare:'Compare', compare_now:'Compare now', clear:'Clear', request_quote:'Request Quote', view_detail:'View details',
     spec_payload:'Payload', spec_reach:'Reach', spec_dof:'DOF', spec_weight:'Weight', spec_year:'Year', spec_speed:'Speed', spec_country:'Origin', spec_autonomy:'Autonomy', spec_category:'Category', spec_brand:'Brand', spec_price:'Price',
     applications:'Applications', related:'Related robots', back:'Back',
@@ -32,7 +33,7 @@ const I18N = {
     foot_explore:'Explore', foot_company:'Company', foot_legal:'Legal', foot_rights:'RobotHub · Global Robot Product Database · For demonstration purposes.'
   },
   zh: {
-    nav_home:'首页', nav_catalog:'产品库', nav_brands:'品牌', nav_compare:'对比', nav_admin:'管理台',
+    nav_home:'首页', nav_catalog:'产品库', nav_brands:'品牌', nav_compare:'对比', nav_fav:'收藏', nav_admin:'管理台',
     site_tag:'全球机器人产品库',
     hero_title:'发现、对比与研究全球每一款机器人',
     hero_sub:'全球最全面的机器人产品数据库——工业机械臂、协作机器人、人形机器人、移动机器人、医疗与服务机器人，按参数、价格与自主度检索。',
@@ -259,12 +260,37 @@ function syncCmpBtn(btn){
   btn.textContent=(on?'✓ ':'+ ')+(on?t('compared'):t('compare'));
 }
 
+/* ---- Favorites store ---- */
+const FAV_KEY='rh_favs';
+const getFavs=()=>JSON.parse(localStorage.getItem(FAV_KEY)||'[]');
+const setFavs=(a)=>{localStorage.setItem(FAV_KEY,JSON.stringify(a));document.querySelectorAll('.fav-btn').forEach(b=>syncFav(b.dataset.id));};
+function toggleFav(id){
+  let a=getFavs();
+  if(a.includes(id)){ a=a.filter(x=>x!==id); setFavs(a); toast(LANG==='zh'?'已取消收藏':'Removed from favorites','ok'); }
+  else { a.push(id); setFavs(a); toast(LANG==='zh'?'已收藏':'Saved to favorites','ok'); }
+  syncFav(id);
+  document.dispatchEvent(new Event('favchange'));
+}
+function syncFav(id){
+  const on=getFavs().includes(id);
+  document.querySelectorAll(`.fav-btn[data-id="${id}"]`).forEach(b=>{ b.classList.toggle('on',on); b.textContent=(on?'★ ':'☆ ')+(on?t('fav_on'):t('fav')); });
+}
+/* ---- Recently viewed ---- */
+const REC_KEY='rh_recent';
+const REC_MAX=12;
+function pushRecent(id){
+  let a=JSON.parse(localStorage.getItem(REC_KEY)||'[]').filter(x=>x!==id);
+  a.unshift(id); a=a.slice(0,REC_MAX);
+  localStorage.setItem(REC_KEY,JSON.stringify(a));
+}
+
 /* ---- Language ---- */
 function setLang(l){ LANG=l; localStorage.setItem('lang',l); document.documentElement.lang=l==='zh'?'zh-CN':'en'; applyI18n(); document.dispatchEvent(new Event('langchange')); }
 function applyI18n(){
   document.querySelectorAll('[data-i]').forEach(el=>{ el.textContent=t(el.dataset.i); });
   document.querySelectorAll('[data-ph]').forEach(el=>{ el.placeholder=t(el.dataset.ph); });
   document.querySelectorAll('.lang-toggle button').forEach(b=>b.classList.toggle('on',b.dataset.l===LANG));
+  document.querySelectorAll('.fav-btn').forEach(b=>syncFav(b.dataset.id));
 }
 
 /* ---- Theme (light / dark) ---- */
@@ -308,6 +334,7 @@ function renderChrome(active){
       <a href="/catalog.html" data-i="nav_catalog" class="${active==='catalog'?'active':''}"></a>
       <a href="/brands.html" data-i="nav_brands" class="${active==='brands'?'active':''}"></a>
       <a href="/compare.html" data-i="nav_compare" class="${active==='compare'?'active':''}"></a>
+      <a href="/favorites.html" data-i="nav_fav" class="${active==='favorites'?'active':''}"></a>
       ${adminLink}
     </div>
     <div class="nav-right">
@@ -317,7 +344,7 @@ function renderChrome(active){
     </div></nav></div></header>`;
   const foot=`<footer class="site-footer"><div class="container"><div class="footer-grid">
     <div class="footer-brand"><div class="logo"><span class="mark">🤖</span><span>Robot<b style="color:#818cf8">Hub</b></span></div><p data-i="foot_about"></p></div>
-    <div><h4 data-i="foot_explore"></h4><a href="/catalog.html" data-i="nav_catalog"></a><a href="/brands.html" data-i="nav_brands"></a><a href="/compare.html" data-i="nav_compare"></a></div>
+    <div><h4 data-i="foot_explore"></h4><a href="/catalog.html" data-i="nav_catalog"></a><a href="/brands.html" data-i="nav_brands"></a><a href="/compare.html" data-i="nav_compare"></a><a href="/favorites.html" data-i="nav_fav"></a></div>
     <div><h4 data-i="foot_company"></h4><a href="#">About</a><a href="#">Blog</a><a href="#">Contact</a></div>
     <div><h4 data-i="foot_legal"></h4><a href="#">Privacy</a><a href="#">Terms</a></div>
     </div><div class="footer-bottom">© 2026 <span data-i="foot_rights"></span></div></div></footer>
@@ -349,6 +376,7 @@ function brandInitials(brand){
 }
 function robotCard(r){
   const cmp=getCmp().includes(r.id);
+  const fav=getFavs().includes(r.id);
   const specs=[];
   if(r.payload!=null) specs.push(`${t('spec_payload')} ${r.payload}kg`);
   if(r.reach!=null) specs.push(`${t('spec_reach')} ${r.reach}mm`);
@@ -356,6 +384,7 @@ function robotCard(r){
   const autoLabel=(META?.autonomyLevels||[]).find(a=>a.id===r.autonomy);
   const catLabel=(META?.categories||[]).find(c=>c.id===r.category);
   return `<div class="rcard cat-${r.category}">
+    <button type="button" class="fav-btn ${fav?'on':''}" data-id="${r.id}" onclick="toggleFav('${r.id}')" aria-label="${t('fav')}" title="${t('fav')}">${fav?'★':'☆'}</button>
     <a class="thumb" href="/detail.html?id=${r.id}">
       <span class="watermark">${brandInitials(r.brand)}</span>
       <span class="emoji">${EMOJI[r.category]||'🤖'}</span>
@@ -380,6 +409,7 @@ function robotCard(r){
 // 列表视图的紧凑行
 function robotListRow(r){
   const cmp=getCmp().includes(r.id);
+  const fav=getFavs().includes(r.id);
   const specs=[];
   if(r.payload!=null) specs.push(`${t('spec_payload')} ${r.payload}kg`);
   if(r.reach!=null) specs.push(`${t('spec_reach')} ${r.reach}mm`);
@@ -396,6 +426,7 @@ function robotListRow(r){
       <div class="lspecs">${specs.join(' · ')}</div>
     </div>
     <div class="lprice">${r.priceText||'—'}</div>
+    <button type="button" class="fav-btn list ${fav?'on':''}" data-id="${r.id}" onclick="toggleFav('${r.id}');syncFav('${r.id}')" aria-label="${t('fav')}">${fav?'★ '+t('fav_on'):'☆ '+t('fav')}</button>
     <button type="button" class="cmp-btn ${cmp?'on':''}" data-id="${r.id}" onclick="toggleCmp('${r.id}');syncCmpBtn(this)">${cmp?'✓ '+t('compared'):'+ '+t('compare')}</button>
   </div>`;
 }

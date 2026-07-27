@@ -67,6 +67,12 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .section-head h2{font-size:27px;font-weight:800;letter-spacing:-.02em}
 .section-head p{color:var(--muted);font-size:15px;margin-top:4px}
 .section-head a.more{font-size:14px;font-weight:600;color:var(--primary)}
+/* 收藏页 */
+.fav-hero{text-align:center;padding:54px 0 8px}
+.fav-hero h1{font-size:34px;font-weight:850;letter-spacing:-.03em;background:linear-gradient(90deg,var(--primary),var(--amber));-webkit-background-clip:text;background-clip:text;color:transparent}
+.fav-hero p{color:var(--muted);font-size:15px;margin-top:8px}
+.fav-head h2{font-size:22px}
+.btn-sm{padding:7px 13px;font-size:13px}
 
 /* ===== Category grid ===== */
 .cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
@@ -129,7 +135,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .rcard:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:color-mix(in srgb,var(--c,#4f46e5) 40%,var(--line))}
 .rcard .thumb{height:150px;background:linear-gradient(135deg,color-mix(in srgb,var(--c,#4f46e5) 14%,#fff),color-mix(in srgb,var(--c,#4f46e5) 4%,#fff));display:grid;place-items:center;position:relative;border-bottom:1px solid var(--line-2)}
 .rcard .thumb .emoji{font-size:56px;filter:drop-shadow(0 6px 12px rgba(0,0,0,.12))}
-.rcard .flag{position:absolute;top:10px;right:12px;font-size:20px}
+.rcard .flag{position:absolute;bottom:10px;right:12px;font-size:20px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.2))}
 .rcard .feat{position:absolute;top:10px;left:12px;background:var(--amber);color:#fff;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;letter-spacing:.03em}
 .rcard .body{padding:15px 16px 16px;flex:1;display:flex;flex-direction:column}
 .rcard .tags{display:flex;gap:6px;margin-bottom:9px;flex-wrap:wrap}
@@ -146,6 +152,16 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .rcard .price{font-size:13.5px;font-weight:700;color:var(--ink)}
 .rcard .cmp{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);font-weight:600}
 .rcard .cmp input{width:15px;height:15px;accent-color:var(--primary)}
+/* 收藏按钮（卡片浮层） */
+.fav-btn{position:absolute;top:9px;right:10px;z-index:3;width:30px;height:30px;display:grid;place-items:center;border:none;border-radius:50%;background:rgba(255,255,255,.9);color:#94a3b8;font-size:16px;line-height:1;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.14);transition:.15s}
+.fav-btn:hover{color:var(--amber);transform:scale(1.08)}
+.fav-btn.on{color:#fff;background:var(--amber);box-shadow:0 2px 8px rgba(245,158,11,.45)}
+/* 收藏按钮（列表行内联） */
+.lrow .fav-btn{position:static;width:auto;height:auto;padding:8px 14px;border-radius:10px;background:var(--surface);box-shadow:none;border:1px solid var(--line);font-size:13px;font-weight:700;color:var(--muted)}
+.lrow .fav-btn:hover{color:var(--amber);border-color:var(--amber)}
+.lrow .fav-btn.on{background:var(--amber);border-color:var(--amber);color:#fff}
+/* 详情页收藏按钮 */
+.fav-act.on{background:var(--amber);border-color:var(--amber);color:#fff}
 
 /* ===== Pagination ===== */
 .pager{display:flex;justify-content:center;gap:6px;margin-top:36px}

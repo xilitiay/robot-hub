@@ -71,7 +71,7 @@ function copyDir(src, dst) {
 copyDir(path.join(__dirname, 'public'), DIST);
 
 // inject bundle script before app.js in each HTML
-const pages = ['index.html', 'catalog.html', 'detail.html', 'compare.html', 'brands.html', 'admin.html'];
+const pages = ['index.html', 'catalog.html', 'detail.html', 'compare.html', 'brands.html', 'admin.html', 'favorites.html'];
 const re = /<script src=["']\/js\/app\.js["']><\/script>/;
 for (const pg of pages) {
   const f = path.join(DIST, pg);

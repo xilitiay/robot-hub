@@ -64,6 +64,7 @@ async function render(){
   const cat=META.categories.find(c=>c.id===r.category), auto=META.autonomyLevels.find(a=>a.id===r.autonomy);
   const cc=r.countryInfo;
   document.title=`${r.brand} ${r.model} — RobotHub`;
+  pushRecent(r.id);
   document.getElementById('root').innerHTML=`
     <div class="breadcrumb"><a href="/">RobotHub</a> / <a href="/catalog.html?category=${r.category}">${LANG==='zh'?cat.zh:cat.en}</a> / ${r.model}</div>
     <div class="detail-top cat-${r.category}">
@@ -89,6 +90,7 @@ async function render(){
         ${r.apps&&r.apps.length?`<div class="app-chips">${r.apps.map(a=>`<span class="app-chip">${a}</span>`).join('')}</div>`:''}
         <div class="detail-actions">
           <button class="btn btn-primary" onclick="openRfq()" data-i="request_quote"></button>
+          <button class="btn btn-ghost fav-act ${getFavs().includes(r.id)?'on':''}" id="favBtn" data-id="${r.id}" onclick="toggleFav('${r.id}');syncFav('${r.id}')">${getFavs().includes(r.id)?'★ '+t('fav_on'):'☆ '+t('fav')}</button>
           <button class="btn btn-ghost" onclick="toggleCmp('${r.id}')" data-i="compare"></button>
           <button class="btn btn-ghost" onclick="printRobot()" data-i="cmp_print"></button>
           <a class="btn btn-ghost" href="/catalog.html?category=${r.category}" data-i="back"></a>
