@@ -35,6 +35,7 @@
       </div>
     </div>
     <div class="tag-bar" id="favTagBar" style="display:none"></div>
+    <div class="tag-overview" id="tagOverview" style="display:none"></div>
     <div class="robot-grid" id="favGrid"></div>
   </section>
 </div>
@@ -142,7 +143,31 @@ async function renderFav(){
     : `<div class="empty" style="grid-column:1/-1"><div class="e">⭐</div><h3 data-i="fav_empty"></h3><p data-i="fav_empty_sub"></p><a class="btn btn-primary" href="/catalog.html" data-i="browse" style="margin-top:18px"></a></div>`;
   applyI18n();
   renderFavTagBar();
+  renderTagOverview();
   if(items.length) decorateFavCards(grid, items);
+}
+// 统计每个标签被打在多少款机器人上（含收藏与最近浏览之外的标签）
+function tagCounts(){
+  const m=getFavTags(); const c={};
+  for(const id in m){ (m[id]||[]).forEach(tg=>{ c[tg]=(c[tg]||0)+1; }); }
+  return c;
+}
+function renderTagOverview(){
+  const box=document.getElementById('tagOverview');
+  const tags=allFavTags();
+  if(!tags.length){ box.style.display='none'; box.innerHTML=''; return; }
+  const counts=tagCounts();
+  box.style.display='block';
+  box.innerHTML = `<div class="to-head"><span data-i="tag_overview"></span><span class="to-sub" data-i="tag_overview_sub"></span></div>`
+    + `<div class="to-list">`
+    + tags.map(tg=>`<div class="to-item ${FAV_TAG_FILTER===tg?'on':''}" style="--dot-c:${favTagColor(tg)}" onclick="filterFavByTag('${escJs(tg)}')" title="${escHtml(tg)}">
+        <span class="dot"></span>
+        <span class="to-name">${escHtml(tg)}</span>
+        <span class="to-count">${counts[tg]||0}</span>
+        <button class="chip-edit" title="${t('tag_edit')}" onclick="event.stopPropagation();openTagEditor('${escJs(tg)}')">✎</button>
+      </div>`).join('')
+    + `</div>`;
+  applyI18n();
 }
 async function renderRecent(){
   const box=document.getElementById('recentGrid'), sec=document.getElementById('recentSection');
