@@ -249,16 +249,22 @@ function ensureSelBar(){
   if(document.getElementById('selBar')) return;
   const bar=document.createElement('div');
   bar.id='selBar';
-  bar.innerHTML=`<div class="sb-inner">
-    <span class="sb-count"><span class="sb-ico">📋</span> <span data-i="batch_sel_prefix"></span><b id="sbCount">0</b><span data-i="batch_sel_suffix"></span></span>
-    <div class="sb-actions">
-      <input id="sbTag" class="modal-input btag sb-tag" maxlength="24" data-ph="batch_tag" onkeydown="if(event.key==='Enter')selBarTagApply()">
-      <button class="btn btn-primary btn-sm" type="button" id="sbTagBtn" data-i="batch_apply"></button>
-      <button class="btn btn-ghost btn-sm" type="button" id="sbCmp" data-i="compare"></button>
-      <button class="btn btn-ghost btn-sm" type="button" id="sbFav" data-i="fav"></button>
-      <button class="btn btn-ghost btn-sm" type="button" id="sbClear" data-i="batch_clear"></button>
-      <button class="btn btn-ghost btn-sm" type="button" id="sbShare" data-i="sel_share"></button>
+  bar.innerHTML=`<div class="sb-wrap">
+    <div class="sb-inner">
+      <button class="sb-count" type="button" id="sbCountBtn" onclick="toggleSelList()" title="${LANG==='zh'?'查看已选清单':'View selection'}">
+        <span class="sb-ico">📋</span> <span data-i="batch_sel_prefix"></span><b id="sbCount">0</b><span data-i="batch_sel_suffix"></span>
+        <span class="sb-caret">▾</span>
+      </button>
+      <div class="sb-actions">
+        <input id="sbTag" class="modal-input btag sb-tag" maxlength="24" data-ph="batch_tag" onkeydown="if(event.key==='Enter')selBarTagApply()">
+        <button class="btn btn-primary btn-sm" type="button" id="sbTagBtn" data-i="batch_apply"></button>
+        <button class="btn btn-ghost btn-sm" type="button" id="sbCmp" data-i="compare"></button>
+        <button class="btn btn-ghost btn-sm" type="button" id="sbFav" data-i="fav"></button>
+        <button class="btn btn-ghost btn-sm" type="button" id="sbClear" data-i="batch_clear"></button>
+        <button class="btn btn-ghost btn-sm" type="button" id="sbShare" data-i="sel_share"></button>
+      </div>
     </div>
+    <div class="sel-list" id="selList"></div>
   </div>`;
   document.body.appendChild(bar);
   bar.querySelector('#sbCmp').addEventListener('click',selBarAddCmp);
@@ -274,6 +280,8 @@ function syncSelBar(){
   const n=getSel().size;
   const cnt=document.getElementById('sbCount'); if(cnt) cnt.textContent=n;
   bar.style.display = n>0 ? 'flex' : 'none';
+  const list=document.getElementById('selList');
+  if(list && SEL_LIST_OPEN) renderSelList();
 }
 function selBarAddCmp(){ const ids=[...getSel()]; if(!ids.length) return; addAllToCmp(ids); toast(LANG==='zh'?`已加入对比 ${ids.length} 款`:`Added ${ids.length} to compare`,'ok'); }
 function selBarFavAll(){
@@ -325,6 +333,60 @@ function applySelFromUrl(){
     }
   }catch(e){}
 }
+// ---- 已选清单：按类目/品牌分组折叠显示 ----
+let SEL_GROUP_MODE='category';   // category | brand
+let SEL_LIST_OPEN=false;
+const selGroupCollapsed={};
+function _selMeta(id){
+  if(window.ROBOTHUB_STATIC && window.ROBOTHUB_ROBOTS){
+    const r=window.ROBOTHUB_ROBOTS.find(x=>x.id===id);
+    if(r) return {id, model:r.model, brand:r.brand, category:r.category};
+  }
+  const card=document.querySelector('.rcard[data-id="'+id+'"]');
+  if(card){
+    const catClass=(card.className.match(/cat-([\w-]+)/)||[])[1]||'';
+    const brand=(card.querySelector('.brand')||{}).textContent||'';
+    const model=(card.querySelector('h3 a')||{}).textContent||id;
+    return {id, model, brand, category:catClass};
+  }
+  return {id, model:id, brand:'', category:''};
+}
+function renderSelList(){
+  const box=document.getElementById('selList'); if(!box) return;
+  const ids=[...getSel()];
+  if(!ids.length){ box.innerHTML=''; return; }
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const metas=ids.map(_selMeta);
+  const groups={};
+  metas.forEach(m=>{ const k=(SEL_GROUP_MODE==='brand'?(m.brand||(LANG==='zh'?'未命名':'Unknown')):(m.category||(LANG==='zh'?'未分类':'Uncategorized'))); (groups[k]=groups[k]||[]).push(m); });
+  const keys=Object.keys(groups).sort((a,b)=>groups[b].length-groups[a].length||a.localeCompare(b));
+  const tCat=LANG==='zh'?'按类目':'By category';
+  const tBrand=LANG==='zh'?'按品牌':'By brand';
+  box.innerHTML = `<div class="sel-list-tabs">
+      <button class="sel-tab ${SEL_GROUP_MODE==='category'?'on':''}" type="button" onclick="setSelGroupMode('category')">${tCat}</button>
+      <button class="sel-tab ${SEL_GROUP_MODE==='brand'?'on':''}" type="button" onclick="setSelGroupMode('brand')">${tBrand}</button>
+    </div>`
+    + keys.map(k=>{
+        const ek=esc(k); const arr=groups[k]; const collapsed=selGroupCollapsed[ek]?'collapsed':'';
+        return `<div class="sel-group ${collapsed}" data-key="${ek}">
+          <div class="sel-group-head" onclick="toggleSelGroup(this)">
+            <span class="g-caret">▾</span>
+            <span class="g-name">${esc(k)}</span>
+            <span class="g-count">${arr.length}</span>
+          </div>
+          <div class="sel-group-body">
+            ${arr.map(m=>`<div class="sel-item">
+              <span class="si-main">${esc(m.model||m.id)}${m.brand?` <span class="si-brand">${esc(m.brand)}</span>`:''}</span>
+              <button class="si-x" type="button" title="${LANG==='zh'?'移除':'Remove'}" onclick="removeSelOne('${esc(m.id)}')">×</button>
+            </div>`).join('')}
+          </div>
+        </div>`;
+      }).join('');
+}
+function toggleSelList(){ SEL_LIST_OPEN=!SEL_LIST_OPEN; const bar=document.getElementById('selBar'); if(bar) bar.classList.toggle('expanded',SEL_LIST_OPEN); renderSelList(); }
+function setSelGroupMode(m){ SEL_GROUP_MODE=m; if(SEL_LIST_OPEN) renderSelList(); }
+function toggleSelGroup(headEl){ const g=headEl?headEl.parentElement:null; if(g){ const ek=g.dataset.key; g.classList.toggle('collapsed'); selGroupCollapsed[ek]=g.classList.contains('collapsed'); } }
+function removeSelOne(id){ const s=getSel(); s.delete(id); setSel(s); }
 function initSelBar(){
   applySelFromUrl();
   ensureSelBar();

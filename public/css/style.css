@@ -125,6 +125,31 @@ body.selecting .rcard.sel{border-color:var(--primary);box-shadow:0 0 0 1px var(-
 #selBar .sb-ico{font-size:14px}
 #selBar .sb-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 #selBar .sb-tag{width:116px}
+#selBar .sb-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;width:100%}
+#selBar .sb-count{font-weight:700;color:var(--ink-2);white-space:nowrap;display:inline-flex;align-items:center;gap:6px;background:none;border:none;font:inherit;cursor:pointer;padding:6px 8px;border-radius:999px}
+#selBar .sb-count:hover{background:rgba(127,127,127,.14)}
+#selBar .sb-caret{font-size:10px;transition:transform .15s;opacity:.7}
+#selBar.expanded .sb-caret{transform:rotate(180deg)}
+#selBar .sel-list{display:none;pointer-events:auto;width:min(calc(100% - 24px),720px);max-height:52vh;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(15,23,42,.18);padding:6px 0}
+#selBar.expanded .sel-list{display:block}
+#selBar .sel-list-tabs{display:flex;gap:6px;padding:6px 12px 10px}
+#selBar .sel-tab{font-size:12.5px;font-weight:600;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:5px 12px;cursor:pointer}
+#selBar .sel-tab.on{color:#fff;background:var(--primary);border-color:var(--primary)}
+#selBar .sel-group{border-top:1px solid var(--line)}
+#selBar .sel-group:first-of-type{border-top:none}
+#selBar .sel-group-head{display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;user-select:none}
+#selBar .sel-group-head:hover{background:var(--bg)}
+#selBar .g-caret{font-size:10px;color:var(--muted);transition:transform .15s}
+#selBar .sel-group.collapsed .g-caret{transform:rotate(-90deg)}
+#selBar .g-name{font-weight:600;color:var(--ink-2);font-size:13.5px}
+#selBar .g-count{margin-left:auto;font-size:12px;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:1px 9px;min-width:22px;text-align:center}
+#selBar .sel-group-body{padding:2px 14px 8px}
+#selBar .sel-group.collapsed .sel-group-body{display:none}
+#selBar .sel-item{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:13px;color:var(--ink)}
+#selBar .si-main{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#selBar .si-brand{color:var(--muted);font-size:12px;margin-left:6px}
+#selBar .si-x{flex:none;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;padding:2px 6px;border-radius:6px}
+#selBar .si-x:hover{background:color-mix(in srgb,#ef4444 14%,transparent);color:#ef4444}
 @media print{#selBar{display:none!important}}
 .modal-merge{display:flex;gap:8px;align-items:center}
 .modal-merge select{min-width:0;flex:1}
