@@ -592,6 +592,8 @@ body.selecting .rcard.sel{border-color:var(--primary);box-shadow:0 0 0 1px var(-
 .bulk-sel{display:flex;gap:6px;margin-right:8px;flex-wrap:wrap}
 .bs-btn{border:1px solid var(--line);background:var(--surface);color:var(--ink-2);font-size:12.5px;padding:6px 12px;border-radius:9px;cursor:pointer;transition:.15s;white-space:nowrap}
 .bs-btn:hover{border-color:var(--primary);color:var(--primary)}
+.bulk-prog{font-size:12.5px;color:var(--muted);align-self:center;white-space:nowrap;margin-right:2px}
+.bs-danger:hover{border-color:#e11d48;color:#e11d48}
 
 /* catalog 站内搜索 */
 .cat-search{position:relative;display:flex;align-items:center;flex:1;min-width:200px;max-width:420px}
