@@ -309,7 +309,7 @@ function renameFavTag(oldTag,newTag){
   }
   if(changed) setFavTags(m);
   const cm=getFavTagColors();
-  if(cm[oldTag]!=null){ cm[newTag]=cm[oldTag]; delete cm[oldTag]; setFavTagColor(newTag,cm[newTag]); }
+  if(cm[oldTag]!=null){ if(cm[newTag]==null) cm[newTag]=cm[oldTag]; delete cm[oldTag]; localStorage.setItem(FAVTAG_COLOR_KEY,JSON.stringify(cm)); }
   return changed;
 }
 function deleteFavTagGlobal(tag){

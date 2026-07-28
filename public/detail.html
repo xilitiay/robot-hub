@@ -19,8 +19,17 @@
     <div class="ph-meta" id="phMeta"></div>
   </div>
   <div id="root"></div>
-  <div class="print-foot" id="printFoot" aria-hidden="true"></div>
-</div>
+    <div class="print-foot" id="printFoot" aria-hidden="true"></div>
+    <div class="batch-bar" id="relBatchBar" style="display:none">
+      <span class="bcount"><span data-i="batch_sel_prefix"></span><b id="relBatchCount">0</b><span data-i="batch_sel_suffix"></span></span>
+      <button class="btn btn-primary btn-sm" type="button" onclick="relAddCmp()" data-i="compare"></button>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="relFavAll()" data-i="fav"></button>
+      <input id="relBatchTag" class="modal-input btag" maxlength="24" data-ph="batch_tag" onkeydown="if(event.key==='Enter')relApplyTag()">
+      <button class="btn btn-ghost btn-sm" type="button" onclick="relApplyTag()" data-i="batch_apply"></button>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="selectRelAll()" data-i="batch_all"></button>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="clearRelSel()" data-i="batch_clear"></button>
+    </div>
+  </div>
 
 <!-- RFQ modal -->
 <div class="modal-mask" id="rfqMask">
@@ -98,10 +107,11 @@ async function render(){
       </div>
     </div>
     <div class="section detail-related" style="padding:44px 0 0">
-      <div class="section-head"><h2 data-i="related"></h2></div>
-      <div class="robot-grid">${d.related.map(robotCard).join('')}</div>
+      <div class="section-head"><h2 data-i="related"></h2>${d.related.length?`<button class="btn btn-ghost btn-sm" id="relSelToggle" type="button" onclick="toggleRelSelect()" data-i="sel"></button>`:''}</div>
+      <div class="robot-grid" id="relGrid">${d.related.map(robotCard).join('')}</div>
     </div>`;
   applyI18n();
+  syncRelSelUI(); markRelSelected();
   setTimeout(()=>document.querySelectorAll('.spec-bars .fill').forEach(f=>f.style.width=f.dataset.w+'%'),80);
 }
 function openRfq(){ document.getElementById('rfqMask').classList.add('show'); }
@@ -130,7 +140,53 @@ async function submitRfq(){
   if(res.ok){ closeRfq(); toast(t('rfq_ok'),'ok'); ['f_name','f_company','f_email','f_phone','f_msg'].forEach(i=>document.getElementById(i).value=''); }
 }
 const val=(i)=>document.getElementById(i).value;
-async function init(){ renderChrome('catalog'); await loadMeta(); applyI18n(); renderTray(); render(); document.addEventListener('langchange',render); }
+/* ---- 相关推荐 多选 + 批量操作 ---- */
+let REL_SEL_MODE=false;
+const REL_SEL=new Set();
+function syncRelSelUI(){
+  const btn=document.getElementById('relSelToggle');
+  if(btn){ btn.classList.toggle('on',REL_SEL_MODE); btn.textContent = REL_SEL_MODE ? t('sel_done') : t('sel'); }
+  document.body.classList.toggle('selecting',REL_SEL_MODE);
+  updateRelBatchBar();
+}
+function toggleRelSelect(){ REL_SEL_MODE=!REL_SEL_MODE; if(!REL_SEL_MODE) clearRelSel(); syncRelSelUI(); }
+function onRelGridClick(e){
+  if(!REL_SEL_MODE) return;
+  if(e.target.closest('button')||e.target.closest('a')||e.target.closest('input')) return;
+  const card=e.target.closest('#relGrid .rcard'); if(!card) return;
+  const id=card.dataset.id; if(!id) return;
+  if(REL_SEL.has(id)) REL_SEL.delete(id); else REL_SEL.add(id);
+  card.classList.toggle('sel',REL_SEL.has(id));
+  updateRelBatchBar();
+}
+function selectRelAll(){ document.querySelectorAll('#relGrid .rcard').forEach(c=>{ const id=c.dataset.id; if(id){ REL_SEL.add(id); c.classList.add('sel'); } }); updateRelBatchBar(); }
+function clearRelSel(){ REL_SEL.clear(); document.querySelectorAll('#relGrid .rcard').forEach(c=>c.classList.remove('sel')); updateRelBatchBar(); }
+function markRelSelected(){ document.querySelectorAll('#relGrid .rcard').forEach(c=>{ if(REL_SEL.has(c.dataset.id)) c.classList.add('sel'); }); }
+function updateRelBatchBar(){
+  const bar=document.getElementById('relBatchBar');
+  if(bar) bar.style.display=(REL_SEL_MODE && REL_SEL.size>0)?'flex':'none';
+  const cnt=document.getElementById('relBatchCount'); if(cnt) cnt.textContent=REL_SEL.size;
+}
+function relAddCmp(){ if(!REL_SEL.size) return; addAllToCmp([...REL_SEL]); clearRelSel(); }
+function relFavAll(){
+  if(!REL_SEL.size) return;
+  const a=getFavs(); let added=0; REL_SEL.forEach(id=>{ if(!a.includes(id)){ a.push(id); added++; } });
+  setFavs(a); REL_SEL.forEach(id=>syncFav(id)); clearRelSel();
+  toast(added?(LANG==='zh'?`已收藏 ${added} 款`:`Saved ${added} items`):(LANG==='zh'?'已在收藏中':'Already saved'),'ok');
+}
+function relApplyTag(){
+  const tag=document.getElementById('relBatchTag').value.trim(); if(!tag) return;
+  let n=0; REL_SEL.forEach(id=>{ addFavTag(id,tag); n++; });
+  document.getElementById('relBatchTag').value=''; clearRelSel();
+  toast(LANG==='zh'?`已给 ${n} 款打上「${tag}」`:`Tagged ${n} items with "${tag}"`,'ok');
+}
+async function init(){
+  renderChrome('catalog'); await loadMeta(); applyI18n(); renderTray();
+  document.getElementById('root').addEventListener('click', onRelGridClick);
+  document.addEventListener('favchange',()=>{ REL_SEL.forEach(id=>syncFav(id)); });
+  document.addEventListener('langchange',render);
+  render();
+}
 init();
 </script>
 </body>

@@ -52,7 +52,8 @@
   <div class="modal tag-modal">
     <h3 data-i="tag_edit"></h3>
     <label class="modal-label" data-i="tag_new_name"></label>
-    <input id="tagNameInput" class="modal-input" maxlength="24" autocomplete="off">
+    <input id="tagNameInput" class="modal-input" maxlength="24" autocomplete="off" oninput="checkTagConflict()">
+    <div class="tag-conflict" id="tagConflict" style="display:none"></div>
     <div class="modal-label" data-i="tag_color"></div>
     <div class="swatches" id="tagSwatches"></div>
     <div class="modal-label" data-i="tag_merge"></div>
@@ -64,7 +65,7 @@
       <button class="btn btn-ghost btn-sm btn-danger" type="button" onclick="deleteFavTagGlobal(currentEditTag);closeTagEditor();renderFav()" data-i="tag_delete"></button>
       <span class="spacer"></span>
       <button class="btn btn-ghost btn-sm" type="button" onclick="closeTagEditor()" data-i="tag_cancel"></button>
-      <button class="btn btn-primary btn-sm" type="button" onclick="saveTagEdit()" data-i="tag_save"></button>
+      <button class="btn btn-primary btn-sm" type="button" id="tagSaveBtn" onclick="saveTagEdit()" data-i="tag_save"></button>
     </div>
   </div>
 </div>
@@ -120,7 +121,25 @@ function openTagEditor(tag){
   sel.innerHTML = others.length ? others.map(tg=>`<option value="${escHtml(tg)}">${escHtml(tg)}</option>`).join('') : `<option value="" disabled>—</option>`;
   document.getElementById('mergeBtn').disabled = !others.length;
   document.getElementById('tagModal').style.display='flex';
+  checkTagConflict();
   setTimeout(()=>document.getElementById('tagNameInput').focus(),0);
+}
+// 重命名时的实时冲突检测：若新名称已存在（即合并），给出提示并把保存按钮变为「合并」
+function checkTagConflict(){
+  const nv=document.getElementById('tagNameInput').value.trim();
+  const old=currentEditTag;
+  const el=document.getElementById('tagConflict');
+  const saveBtn=document.getElementById('tagSaveBtn');
+  if(nv && nv!==old && allFavTags().includes(nv)){
+    el.style.display='block';
+    el.textContent = LANG==='zh'
+      ? `「${nv}」已存在，保存将把「${old}」合并进「${nv}」`
+      : `"${nv}" already exists — saving will merge "${old}" into it`;
+    if(saveBtn) saveBtn.textContent = LANG==='zh' ? t('tag_merge_btn') : 'Merge';
+  } else {
+    el.style.display='none'; el.textContent='';
+    if(saveBtn) saveBtn.textContent = t('tag_save');
+  }
 }
 function mergeTagInto(){
   const from=currentEditTag;
@@ -149,9 +168,11 @@ function renderTagSwatches(){
 function saveTagEdit(){
   const nv=document.getElementById('tagNameInput').value.trim();
   const old=currentEditTag;
+  const conflict = nv && nv!==old && allFavTags().includes(nv);
   if(nv && nv!==old){ if(renameFavTag(old,nv)){ if(FAV_TAG_FILTER===old) FAV_TAG_FILTER=nv; } }
-  if(currentEditColor) setFavTagColor(nv||old, currentEditColor);
+  if(currentEditColor && !conflict) setFavTagColor(nv||old, currentEditColor);
   closeTagEditor(); rerenderFavSections();
+  if(conflict) toast(LANG==='zh'?`已将「${old}」合并到「${nv}」`:`Merged "${old}" into "${nv}"`,'ok');
 }
 
 function renderFavTagBar(){
