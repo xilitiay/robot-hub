@@ -336,6 +336,7 @@ function applySelFromUrl(){
 // ---- 已选清单：按类目/品牌分组折叠显示 ----
 let SEL_GROUP_MODE='category';   // category | brand
 let SEL_LIST_OPEN=false;
+let SEL_LIST_FILTER='all';
 const selGroupCollapsed={};
 function _selMeta(id){
   if(window.ROBOTHUB_STATIC && window.ROBOTHUB_ROBOTS){
@@ -356,13 +357,22 @@ function renderSelList(){
   const ids=[...getSel()];
   if(!ids.length){ box.innerHTML=''; return; }
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  const metas=ids.map(_selMeta);
+  // 本页可见 id 集合（用于"仅本页"视图过滤与来源标记）
+  let visIds=null;
+  if(SEL_LIST_FILTER==='page'){ visIds=new Set([].slice.call(document.querySelectorAll('.rcard[data-id],.lrow[data-id]')).map(e=>e.getAttribute('data-id'))); }
+  const metas=ids.map(_selMeta).filter(m=> !visIds || visIds.has(m.id));
+  if(!metas.length){ box.innerHTML='<div class="sel-empty">'+(LANG==='zh'?'本页暂无已选项':'No items on this page')+'</div>'; return; }
+  const isOnPage=id=> visIds ? visIds.has(id) : !!document.querySelector('.rcard[data-id="'+esc(id)+'"],.lrow[data-id="'+esc(id)+'"]');
   const groups={};
   metas.forEach(m=>{ const k=(SEL_GROUP_MODE==='brand'?(m.brand||(LANG==='zh'?'未命名':'Unknown')):(m.category||(LANG==='zh'?'未分类':'Uncategorized'))); (groups[k]=groups[k]||[]).push(m); });
   const keys=Object.keys(groups).sort((a,b)=>groups[b].length-groups[a].length||a.localeCompare(b));
   const tCat=LANG==='zh'?'按类目':'By category';
   const tBrand=LANG==='zh'?'按品牌':'By brand';
+  const tAll=LANG==='zh'?'全部':'All';
+  const tPage=LANG==='zh'?'仅本页':'This page';
   box.innerHTML = `<div class="sel-list-tabs">
+      <button class="sel-tab ${SEL_LIST_FILTER==='all'?'on':''}" type="button" onclick="setSelListFilter('all')">${tAll}</button>
+      <button class="sel-tab ${SEL_LIST_FILTER==='page'?'on':''}" type="button" onclick="setSelListFilter('page')">${tPage}</button>
       <button class="sel-tab ${SEL_GROUP_MODE==='category'?'on':''}" type="button" onclick="setSelGroupMode('category')">${tCat}</button>
       <button class="sel-tab ${SEL_GROUP_MODE==='brand'?'on':''}" type="button" onclick="setSelGroupMode('brand')">${tBrand}</button>
     </div>`
@@ -375,15 +385,17 @@ function renderSelList(){
             <span class="g-count">${arr.length}</span>
           </div>
           <div class="sel-group-body">
-            ${arr.map(m=>`<div class="sel-item">
+            ${arr.map(m=>{ const onPage=isOnPage(m.id); const srcCls=onPage?'src-page':'src-cross'; const srcTxt=onPage?(LANG==='zh'?'本页':'Here'):(LANG==='zh'?'跨页':'Other'); return `<div class="sel-item">
               <span class="si-main">${esc(m.model||m.id)}${m.brand?` <span class="si-brand">${esc(m.brand)}</span>`:''}</span>
+              <span class="si-src ${srcCls}">${srcTxt}</span>
               <button class="si-x" type="button" title="${LANG==='zh'?'移除':'Remove'}" onclick="removeSelOne('${esc(m.id)}')">×</button>
-            </div>`).join('')}
+            </div>`; }).join('')}
           </div>
         </div>`;
       }).join('');
 }
-function toggleSelList(){ SEL_LIST_OPEN=!SEL_LIST_OPEN; const bar=document.getElementById('selBar'); if(bar) bar.classList.toggle('expanded',SEL_LIST_OPEN); renderSelList(); }
+function setSelListFilter(f){ SEL_LIST_FILTER=f; if(SEL_LIST_OPEN) renderSelList(); }
+function toggleSelList(f){ const nf=(f===undefined)?SEL_LIST_FILTER:f; if(SEL_LIST_OPEN && SEL_LIST_FILTER===nf){ SEL_LIST_OPEN=false; const bar=document.getElementById('selBar'); if(bar) bar.classList.remove('expanded'); renderSelList(); return; } SEL_LIST_FILTER=nf; SEL_LIST_OPEN=true; const bar=document.getElementById('selBar'); if(bar) bar.classList.add('expanded'); renderSelList(); }
 function setSelGroupMode(m){ SEL_GROUP_MODE=m; if(SEL_LIST_OPEN) renderSelList(); }
 function toggleSelGroup(headEl){ const g=headEl?headEl.parentElement:null; if(g){ const ek=g.dataset.key; g.classList.toggle('collapsed'); selGroupCollapsed[ek]=g.classList.contains('collapsed'); } }
 function removeSelOne(id){ const s=getSel(); s.delete(id); setSel(s); }

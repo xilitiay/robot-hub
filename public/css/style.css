@@ -600,6 +600,12 @@ body.selecting .rcard.sel{border-color:var(--primary);box-shadow:0 0 0 1px var(-
 .bulk-bar-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,var(--primary),#7c9cff);transition:width .2s}
 .bulk-prog.global.clickable{cursor:pointer}
 .bulk-prog.global.clickable:hover{text-decoration:underline;filter:brightness(.92)}
+.bulk-prog.clickable{cursor:pointer}
+.bulk-prog.clickable:hover{text-decoration:underline;filter:brightness(.92)}
+.si-src{font-size:10.5px;line-height:1;padding:1px 6px;border-radius:6px;margin-left:6px;flex:0 0 auto;white-space:nowrap}
+.si-src.src-page{background:rgba(16,185,129,.16);color:#0f9d6b}
+.si-src.src-cross{background:rgba(124,124,140,.16);color:#8a8a96}
+.sel-empty{padding:14px 4px;color:var(--muted);font-size:13px;text-align:center}
 
 /* catalog 站内搜索 */
 .cat-search{position:relative;display:flex;align-items:center;flex:1;min-width:200px;max-width:420px}

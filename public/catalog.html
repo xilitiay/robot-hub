@@ -31,7 +31,7 @@
         </div>
         <div class="toolbar-right">
           <div class="bulk-sel">
-            <span class="bulk-prog" id="bulkPageProg"></span><span class="bulk-bar" title="本页选择进度"><span class="bulk-bar-fill" id="bulkBarFill"></span></span><span class="bulk-sep">·</span><span class="bulk-prog global clickable" id="bulkGlobalProg" role="button" tabindex="0" title="点击查看已选清单"></span>
+            <span class="bulk-prog clickable" id="bulkPageProg" role="button" tabindex="0" title="点击仅看本页已选"></span><span class="bulk-bar" title="本页选择进度"><span class="bulk-bar-fill" id="bulkBarFill"></span></span><span class="bulk-sep">·</span><span class="bulk-prog global clickable" id="bulkGlobalProg" role="button" tabindex="0" title="点击查看已选清单"></span>
             <button class="bs-btn" type="button" id="bsPageBtn" onclick="selectAllPage()"></button>
             <button class="bs-btn" type="button" id="bsCatBtn" onclick="selectAllCat()"></button>
             <button class="bs-btn" type="button" id="bsInvBtn" onclick="invertPage()"></button>
@@ -160,7 +160,7 @@ function selectAllCat(){
 function pageSelCount(){ try{ return ALL.filter(r=>getSel().has(r.id)).length; }catch(e){ return 0; } }
 function updateBulkBtns(){
   const X=pageSelCount(), Y=ALL.length, N=getSel().size;
-  const pp=document.getElementById('bulkPageProg'); if(pp) pp.textContent=(LANG==='zh'?`本页 ${X}/${Y} 已选`:`Page ${X}/${Y}`);
+  const pp=document.getElementById('bulkPageProg'); if(pp){ pp.textContent=(LANG==='zh'?`本页 ${X}/${Y} 已选`:`Page ${X}/${Y}`); pp.onclick=togglePageList; }
   const gp=document.getElementById('bulkGlobalProg'); if(gp){ gp.textContent=(LANG==='zh'?`累计 ${N} 项`:`${N} total`); gp.onclick=toggleGlobalList; }
   const bf=document.getElementById('bulkBarFill'); if(bf) bf.style.width=(Y?Math.round(X/Y*100):0)+'%';
   const bp=document.getElementById('bsPageBtn'); if(bp) bp.textContent=(LANG==='zh'?'全选本页':'Select page');
@@ -172,7 +172,8 @@ function invertPage(){
   try{ const s=getSel(); ALL.forEach(r=>{ if(s.has(r.id)) s.delete(r.id); else s.add(r.id); }); setSel(s); }catch(e){}
 }
 function clearAllSel(){ try{ setSel(new Set()); }catch(e){} }
-function toggleGlobalList(){ try{ if(getSel().size>0) toggleSelList(); }catch(e){} }
+function toggleGlobalList(){ try{ if(getSel().size>0) toggleSelList('all'); }catch(e){} }
+function togglePageList(){ try{ if(getSel().size>0) toggleSelList('page'); }catch(e){} }
 function renderItems(){
   const grid=document.getElementById('grid');
   if(!ALL.length){ grid.innerHTML=''; return; }
