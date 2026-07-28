@@ -588,6 +588,10 @@ body.selecting .rcard.sel{border-color:var(--primary);box-shadow:0 0 0 1px var(-
 .rcard.sel,.lrow.sel{outline:2px solid var(--primary);outline-offset:-2px}
 .rcard.sel .sel-btn,.lrow.sel .sel-btn{background:var(--primary);border-color:var(--primary);color:#fff}
 .lrow .sel-btn{position:static;align-self:center;margin:0 8px 0 0;flex:0 0 auto}
+/* 批量选择按钮 */
+.bulk-sel{display:flex;gap:6px;margin-right:8px;flex-wrap:wrap}
+.bs-btn{border:1px solid var(--line);background:var(--surface);color:var(--ink-2);font-size:12.5px;padding:6px 12px;border-radius:9px;cursor:pointer;transition:.15s;white-space:nowrap}
+.bs-btn:hover{border-color:var(--primary);color:var(--primary)}
 
 /* catalog 站内搜索 */
 .cat-search{position:relative;display:flex;align-items:center;flex:1;min-width:200px;max-width:420px}
