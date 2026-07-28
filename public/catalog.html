@@ -141,7 +141,7 @@ function renderItems(){
   if(!ALL.length){ grid.innerHTML=''; return; }
   grid.className='robot-grid'+(state.view==='list'?' list':'');
   grid.innerHTML=state.view==='list'?ALL.map(robotListRow).join(''):ALL.map(robotCard).join('');
-  applyI18n();
+  applyI18n(); markCatalogSel();
 }
 
 async function load(reset){
@@ -194,6 +194,7 @@ async function init(){
   document.getElementById('sort').value=state.sort;
   updateViewBtns();
   applyI18n(); renderTray(); buildFilters();
+  document.addEventListener('selbasket', markCatalogSel);
   const cs=document.getElementById('catSearch'); if(cs){ cs.value=state.q||''; const cc=document.getElementById('catSearchClear'); if(cc) cc.style.display=state.q?'block':'none'; }
   load(true); setupObserver();
   document.addEventListener('langchange',()=>{ buildFilters(); load(true); });

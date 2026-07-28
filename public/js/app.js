@@ -398,6 +398,19 @@ if(typeof document!=='undefined'){
 }
 // toggle one id in the shared basket, return new state (true=selected)
 function toggleSelStore(id){ const s=getSel(); if(s.has(id)) s.delete(id); else s.add(id); setSel(s); return s.has(id); }
+function toggleCardSel(id){ toggleSelStore(id); }
+function markCatalogSel(){
+  try{
+    const sel=getSel();
+    document.querySelectorAll('.rcard,.lrow').forEach(el=>{
+      const id=el.getAttribute('data-id'); if(!id) return;
+      const on=sel.has(id);
+      el.classList.toggle('sel', on);
+      const b=el.querySelector('.sel-btn');
+      if(b) b.classList.toggle('on', on);
+    });
+  }catch(e){}
+}
 function addSelStore(id){ const s=getSel(); s.add(id); setSel(s); }
 function removeSelStore(id){ const s=getSel(); s.delete(id); setSel(s); }
 
@@ -606,7 +619,9 @@ function robotCard(r){
   if(r.dof!=null) specs.push(`${r.dof} ${t('spec_dof')}`);
   const autoLabel=(META?.autonomyLevels||[]).find(a=>a.id===r.autonomy);
   const catLabel=(META?.categories||[]).find(c=>c.id===r.category);
-  return `<div class="rcard cat-${r.category}" data-id="${r.id}">
+  const sel=getSel().has(r.id);
+  return `<div class="rcard cat-${r.category}${sel?' sel':''}" data-id="${r.id}">
+    <button type="button" class="sel-btn" data-id="${r.id}" onclick="toggleCardSel('${r.id}')" title="${LANG==='zh'?'选择':'Select'}"><span class="check">✓</span></button>
     <button type="button" class="fav-btn ${fav?'on':''}" data-id="${r.id}" onclick="toggleFav('${r.id}')" aria-label="${t('fav')}" title="${t('fav')}">${fav?'★':'☆'}</button>
     <a class="thumb" href="/detail.html?id=${r.id}">
       <span class="watermark">${brandInitials(r.brand)}</span>
@@ -641,7 +656,8 @@ function robotListRow(r){
   if(r.year) specs.push(`${r.year}`);
   const autoLabel=(META?.autonomyLevels||[]).find(a=>a.id===r.autonomy);
   const catLabel=(META?.categories||[]).find(c=>c.id===r.category);
-  return `<div class="lrow cat-${r.category}">
+  const sel=getSel().has(r.id);
+  return `<div class="lrow cat-${r.category}${sel?' sel':''}" data-id="${r.id}">
     <a class="lthumb" href="/detail.html?id=${r.id}"><span class="emoji">${EMOJI[r.category]||'🤖'}</span>${r.featured?`<span class="feat">★</span>`:''}</a>
     <div class="linfo">
       <div class="ltags"><span class="tag cat">${catLabel?(LANG==='zh'?catLabel.zh:catLabel.en):r.category}</span><span class="tag auto">${autoLabel?(LANG==='zh'?autoLabel.zh:autoLabel.en):r.autonomy}</span>${r.countryInfo?`<span class="lflag">${r.countryInfo.flag}</span>`:''}</div>
@@ -649,6 +665,7 @@ function robotListRow(r){
       <div class="lspecs">${specs.join(' · ')}</div>
     </div>
     <div class="lprice">${r.priceText||'—'}</div>
+    <button type="button" class="sel-btn list" data-id="${r.id}" onclick="toggleCardSel('${r.id}')" title="${LANG==='zh'?'选择':'Select'}"><span class="check">✓</span></button>
     <button type="button" class="fav-btn list ${fav?'on':''}" data-id="${r.id}" onclick="toggleFav('${r.id}');syncFav('${r.id}')" aria-label="${t('fav')}">${fav?'★ '+t('fav_on'):'☆ '+t('fav')}</button>
     <button type="button" class="cmp-btn ${cmp?'on':''}" data-id="${r.id}" onclick="toggleCmp('${r.id}');syncCmpBtn(this)">${cmp?'✓ '+t('compared'):'+ '+t('compare')}</button>
   </div>`;
