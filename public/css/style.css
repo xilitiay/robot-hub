@@ -598,6 +598,8 @@ body.selecting .rcard.sel{border-color:var(--primary);box-shadow:0 0 0 1px var(-
 .bulk-sep{color:var(--line);align-self:center;margin:0 2px}
 .bulk-bar{position:relative;width:64px;height:6px;border-radius:4px;background:var(--line);align-self:center;overflow:hidden;flex:0 0 auto}
 .bulk-bar-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,var(--primary),#7c9cff);transition:width .2s}
+.bulk-prog.global.clickable{cursor:pointer}
+.bulk-prog.global.clickable:hover{text-decoration:underline;filter:brightness(.92)}
 
 /* catalog 站内搜索 */
 .cat-search{position:relative;display:flex;align-items:center;flex:1;min-width:200px;max-width:420px}
