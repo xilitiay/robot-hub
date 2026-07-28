@@ -117,6 +117,15 @@ body.selecting .rcard.sel{border-color:var(--primary);box-shadow:0 0 0 1px var(-
 .batch-bar .bcount{font-size:13.5px;font-weight:700;color:var(--ink-2)}
 .batch-bar .bcount b{color:var(--primary)}
 .batch-bar .btag{flex:1;min-width:140px;max-width:240px}
+/* 跨页选择篮常驻浮动条 */
+#selBar{position:fixed;top:66px;left:0;right:0;z-index:95;display:none;justify-content:center;pointer-events:none;padding:8px 12px}
+#selBar .sb-inner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;pointer-events:auto;background:var(--surface);border:1px solid var(--line);border-radius:999px;box-shadow:0 10px 30px rgba(15,23,42,.18);padding:7px 10px 7px 16px;max-width:calc(100% - 24px)}
+#selBar .sb-count{font-weight:700;color:var(--ink-2);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+#selBar .sb-count b{color:var(--primary);font-size:15px}
+#selBar .sb-ico{font-size:14px}
+#selBar .sb-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+#selBar .sb-tag{width:116px}
+@media print{#selBar{display:none!important}}
 .modal-merge{display:flex;gap:8px;align-items:center}
 .modal-merge select{min-width:0;flex:1}
 .tag-conflict{display:none;margin:6px 0 2px;padding:8px 11px;border-radius:9px;font-size:12.5px;line-height:1.45;background:color-mix(in srgb,#ef4444 10%,var(--surface));border:1px solid color-mix(in srgb,#ef4444 35%,transparent);color:#ef4444}

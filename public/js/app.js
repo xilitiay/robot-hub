@@ -238,7 +238,63 @@ function staticApi(path, opts){
 /* ---- Cross-page selection basket (persisted) ---- */
 const SEL_KEY='rh_sel';
 function getSel(){ try{ const a=JSON.parse(localStorage.getItem(SEL_KEY)||'[]'); return new Set(Array.isArray(a)?a:[]); }catch(e){ return new Set(); } }
-function setSel(s){ try{ localStorage.setItem(SEL_KEY, JSON.stringify([...s])); }catch(e){} }
+function setSel(s){
+  try{ localStorage.setItem(SEL_KEY, JSON.stringify([...s])); }catch(e){}
+  syncSelBar();
+  try{ document.dispatchEvent(new Event('selbasket')); }catch(e){}
+}
+
+/* ---- Global persistent selection basket bar (always visible when non-empty) ---- */
+function ensureSelBar(){
+  if(document.getElementById('selBar')) return;
+  const bar=document.createElement('div');
+  bar.id='selBar';
+  bar.innerHTML=`<div class="sb-inner">
+    <span class="sb-count"><span class="sb-ico">📋</span> <span data-i="batch_sel_prefix"></span><b id="sbCount">0</b><span data-i="batch_sel_suffix"></span></span>
+    <div class="sb-actions">
+      <input id="sbTag" class="modal-input btag sb-tag" maxlength="24" data-ph="batch_tag" onkeydown="if(event.key==='Enter')selBarTagApply()">
+      <button class="btn btn-primary btn-sm" type="button" id="sbTagBtn" data-i="batch_apply"></button>
+      <button class="btn btn-ghost btn-sm" type="button" id="sbCmp" data-i="compare"></button>
+      <button class="btn btn-ghost btn-sm" type="button" id="sbFav" data-i="fav"></button>
+      <button class="btn btn-ghost btn-sm" type="button" id="sbClear" data-i="batch_clear"></button>
+    </div>
+  </div>`;
+  document.body.appendChild(bar);
+  bar.querySelector('#sbCmp').addEventListener('click',selBarAddCmp);
+  bar.querySelector('#sbFav').addEventListener('click',selBarFavAll);
+  bar.querySelector('#sbClear').addEventListener('click',selBarClear);
+  bar.querySelector('#sbTagBtn').addEventListener('click',selBarTagApply);
+  if(typeof applyI18n==='function') applyI18n();
+  syncSelBar();
+}
+function syncSelBar(){
+  const bar=document.getElementById('selBar'); if(!bar) return;
+  const n=getSel().size;
+  const cnt=document.getElementById('sbCount'); if(cnt) cnt.textContent=n;
+  bar.style.display = n>0 ? 'flex' : 'none';
+}
+function selBarAddCmp(){ const ids=[...getSel()]; if(!ids.length) return; addAllToCmp(ids); toast(LANG==='zh'?`已加入对比 ${ids.length} 款`:`Added ${ids.length} to compare`,'ok'); }
+function selBarFavAll(){
+  const ids=[...getSel()]; if(!ids.length) return;
+  const a=getFavs(); let added=0; ids.forEach(id=>{ if(!a.includes(id)){ a.push(id); added++; } });
+  setFavs(a);
+  toast(added?(LANG==='zh'?`已收藏 ${added} 款`:`Saved ${added} items`):(LANG==='zh'?'已都在收藏中':'Already saved'),'ok');
+}
+function selBarTagApply(){
+  const inp=document.getElementById('sbTag'); const tag=(inp&&inp.value||'').trim(); if(!tag) return;
+  let n=0; getSel().forEach(id=>{ addFavTag(id,tag); n++; });
+  if(inp) inp.value='';
+  toast(LANG==='zh'?`已给 ${n} 款打上「${tag}」`:`Tagged ${n} items with "${tag}"`,'ok');
+}
+function selBarClear(){ setSel(new Set()); toast(LANG==='zh'?'已清空选择':'Selection cleared','ok'); }
+function initSelBar(){
+  ensureSelBar();
+  syncSelBar();
+}
+if(typeof document!=='undefined'){
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initSelBar);
+  else initSelBar();
+}
 // toggle one id in the shared basket, return new state (true=selected)
 function toggleSelStore(id){ const s=getSel(); if(s.has(id)) s.delete(id); else s.add(id); setSel(s); return s.has(id); }
 function addSelStore(id){ const s=getSel(); s.add(id); setSel(s); }

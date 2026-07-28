@@ -318,7 +318,7 @@ function clearSel(){
   updateBatchBar();
 }
 function markSelected(){
-  document.querySelectorAll('#favGrid .rcard, #recentGrid .rcard').forEach(c=>{ if(SEL.has(c.dataset.id)) c.classList.add('sel'); });
+  document.querySelectorAll('#favGrid .rcard, #recentGrid .rcard').forEach(c=>{ c.classList.toggle('sel', SEL.has(c.dataset.id)); });
 }
 function updateBatchBar(){
   const bar=document.getElementById('batchBar');
@@ -343,6 +343,7 @@ async function init(){
   document.getElementById('recentGrid').addEventListener('click',onGridClick);
   document.addEventListener('langchange',()=>{ renderFav(); renderRecent(); if(SEL_MODE) syncSelUI(); });
   document.addEventListener('favchange',()=>{ renderFav(); });
+  document.addEventListener('selbasket',()=>{ SEL=getSel(); markSelected(); updateBatchBar(); });
   document.addEventListener('click',closeTagCtx);
   window.addEventListener('scroll',closeTagCtx,true);
 }
