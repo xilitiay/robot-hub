@@ -69,7 +69,7 @@ function specBars(r){
 async function render(){
   const d=await api('/api/robots/'+id);
   if(d.error){ document.getElementById('root').innerHTML='<div class="empty"><div class="e">🤖</div><h3 data-i="empty_title"></h3></div>'; applyI18n(); return; }
-  ROBOT=d.robot; const r=d.robot;
+  ROBOT=d.robot; const r=d.robot; REL_IDS=(d.related||[]).map(x=>x.id);
   const cat=META.categories.find(c=>c.id===r.category), auto=META.autonomyLevels.find(a=>a.id===r.autonomy);
   const cc=r.countryInfo;
   document.title=`${r.brand} ${r.model} — RobotHub`;
@@ -142,6 +142,7 @@ async function submitRfq(){
 const val=(i)=>document.getElementById(i).value;
 /* ---- 相关推荐 多选 + 批量操作 ---- */
 let REL_SEL_MODE=false;
+let REL_IDS=[];
 const REL_SEL=new Set();
 function syncRelSelUI(){
   const btn=document.getElementById('relSelToggle');
@@ -149,18 +150,34 @@ function syncRelSelUI(){
   document.body.classList.toggle('selecting',REL_SEL_MODE);
   updateRelBatchBar();
 }
-function toggleRelSelect(){ REL_SEL_MODE=!REL_SEL_MODE; if(!REL_SEL_MODE) clearRelSel(); syncRelSelUI(); }
+function toggleRelSelect(){
+  REL_SEL_MODE=!REL_SEL_MODE;
+  if(REL_SEL_MODE){
+    // 进入选择模式时，从跨页选择篮播种：保留收藏页等其它页面所选项
+    const g=getSel();
+    REL_SEL.clear();
+    REL_IDS.forEach(id=>{ if(g.has(id)) REL_SEL.add(id); });
+  } else {
+    clearRelSel();
+  }
+  syncRelSelUI(); markRelSelected();
+}
 function onRelGridClick(e){
   if(!REL_SEL_MODE) return;
   if(e.target.closest('button')||e.target.closest('a')||e.target.closest('input')) return;
   const card=e.target.closest('#relGrid .rcard'); if(!card) return;
   const id=card.dataset.id; if(!id) return;
-  if(REL_SEL.has(id)) REL_SEL.delete(id); else REL_SEL.add(id);
+  if(REL_SEL.has(id)){ REL_SEL.delete(id); removeSelStore(id); }
+  else { REL_SEL.add(id); addSelStore(id); }
   card.classList.toggle('sel',REL_SEL.has(id));
   updateRelBatchBar();
 }
-function selectRelAll(){ document.querySelectorAll('#relGrid .rcard').forEach(c=>{ const id=c.dataset.id; if(id){ REL_SEL.add(id); c.classList.add('sel'); } }); updateRelBatchBar(); }
-function clearRelSel(){ REL_SEL.clear(); document.querySelectorAll('#relGrid .rcard').forEach(c=>c.classList.remove('sel')); updateRelBatchBar(); }
+function selectRelAll(){ document.querySelectorAll('#relGrid .rcard').forEach(c=>{ const id=c.dataset.id; if(id){ REL_SEL.add(id); addSelStore(id); c.classList.add('sel'); } }); updateRelBatchBar(); }
+function clearRelSel(){
+  // 仅移除当前可见的选中项，保留其他页面（如收藏页）的选择
+  document.querySelectorAll('#relGrid .rcard.sel').forEach(c=>{ const id=c.dataset.id; if(id){ REL_SEL.delete(id); removeSelStore(id); } c.classList.remove('sel'); });
+  updateRelBatchBar();
+}
 function markRelSelected(){ document.querySelectorAll('#relGrid .rcard').forEach(c=>{ if(REL_SEL.has(c.dataset.id)) c.classList.add('sel'); }); }
 function updateRelBatchBar(){
   const bar=document.getElementById('relBatchBar');

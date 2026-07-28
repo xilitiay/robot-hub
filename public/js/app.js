@@ -235,6 +235,15 @@ function staticApi(path, opts){
   return Promise.resolve({ error: 'unknown api' });
 }
 
+/* ---- Cross-page selection basket (persisted) ---- */
+const SEL_KEY='rh_sel';
+function getSel(){ try{ const a=JSON.parse(localStorage.getItem(SEL_KEY)||'[]'); return new Set(Array.isArray(a)?a:[]); }catch(e){ return new Set(); } }
+function setSel(s){ try{ localStorage.setItem(SEL_KEY, JSON.stringify([...s])); }catch(e){} }
+// toggle one id in the shared basket, return new state (true=selected)
+function toggleSelStore(id){ const s=getSel(); if(s.has(id)) s.delete(id); else s.add(id); setSel(s); return s.has(id); }
+function addSelStore(id){ const s=getSel(); s.add(id); setSel(s); }
+function removeSelStore(id){ const s=getSel(); s.delete(id); setSel(s); }
+
 /* ---- Compare store ---- */
 const CMP_KEY='cmp_ids';
 const CMP_MAX=6;

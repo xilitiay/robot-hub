@@ -282,9 +282,9 @@ async function renderRecent(){
 async function rerenderFavSections(){ await Promise.all([renderFav(), renderRecent()]); }
 function clearFavs(){ setFavs([]); FAV_TAG_FILTER=''; renderFav(); }
 
-/* ---- 多选 + 批量打标签 ---- */
+/* ---- 多选 + 批量打标签（选择持久化到跨页选择篮 rh_sel） ---- */
 let SEL_MODE=false;
-const SEL=new Set();
+let SEL=getSel();
 function syncSelUI(){
   const btn=document.getElementById('selToggle');
   if(btn){ btn.classList.toggle('on',SEL_MODE); btn.textContent = SEL_MODE ? (LANG==='zh'?'完成':'Done') : (LANG==='zh'?'选择':'Select'); }
@@ -303,15 +303,18 @@ function onGridClick(e){
   const id=card.dataset.id; if(!id) return;
   if(SEL.has(id)) SEL.delete(id); else SEL.add(id);
   card.classList.toggle('sel',SEL.has(id));
+  setSel(SEL);
   updateBatchBar();
 }
 function selectAll(){
   document.querySelectorAll('#favGrid .rcard, #recentGrid .rcard').forEach(c=>{ const id=c.dataset.id; if(id){ SEL.add(id); c.classList.add('sel'); } });
+  setSel(SEL);
   updateBatchBar();
 }
 function clearSel(){
-  SEL.clear();
-  document.querySelectorAll('.rcard.sel').forEach(c=>c.classList.remove('sel'));
+  // 仅移除当前可见的选中项，保留其他页面（如详情页）的选择
+  document.querySelectorAll('#favGrid .rcard.sel, #recentGrid .rcard.sel').forEach(c=>{ SEL.delete(c.dataset.id); c.classList.remove('sel'); });
+  setSel(SEL);
   updateBatchBar();
 }
 function markSelected(){
