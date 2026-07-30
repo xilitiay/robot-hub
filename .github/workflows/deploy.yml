@@ -5,8 +5,14 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# All three are required at the TOP level so BOTH jobs inherit them.
+# - contents: read  -> checkout
+# - pages: write    -> upload-pages-artifact + configure-pages
+# - id-token: write -> OIDC used by deploy-pages
 permissions:
   contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages
@@ -29,6 +35,21 @@ jobs:
           node build_static.js
           touch dist/.nojekyll
 
+      # Self-sufficient: enable/confirm Pages with the Actions source so the
+      # workflow does not depend on a one-time manual API call. Idempotent.
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      # Guard: fail fast if the build produced a broken site. Without this,
+      # a missed bundle injection would still "deploy" a blank page.
+      - name: Verify build output
+        run: |
+          test -f dist/index.html || { echo "::error::dist/index.html missing"; exit 1; }
+          test -f dist/static-bundle.js || { echo "::error::dist/static-bundle.js missing"; exit 1; }
+          test -f dist/js/app.js || { echo "::error::dist/js/app.js missing"; exit 1; }
+          grep -q 'static-bundle.js' dist/index.html || { echo "::error::static-bundle.js not injected into index.html"; exit 1; }
+          echo "build output OK"
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
@@ -40,9 +61,6 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    permissions:
-      pages: write
-      id-token: write
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
