@@ -11,7 +11,7 @@ const I18N = {
     featured_title:'Featured Robots', featured_sub:'Hand-picked flagship models across categories',
     latest_title:'Latest Additions', latest_sub:'Newest models in the database',
     filters:'Filters', f_category:'Category', f_brand:'Brand', f_country:'Country', f_autonomy:'Autonomy', reset:'Reset filters',
-    sort_by:'Sort by', sort_featured:'Featured', sort_year:'Newest', sort_payload:'Payload', sort_price:'Price', sort_views:'Popular', sort_name:'Name', sort_models:'Model count', sort_country:'Country', group_by:'Group by', group_letter:'By letter', group_country:'By country', search_robots:'Search robots by brand or model…', all_categories:'All categories', all_countries:'All countries', search_rfq:'Search leads by name, company, email…',
+    sort_by:'Sort by', sort_featured:'Featured', sort_year:'Newest', sort_payload:'Payload', sort_price:'Price', sort_views:'Popular', sort_name:'Name', sort_models:'Model count', sort_country:'Country', group_by:'Group by', group_letter:'By letter', group_country:'By country', search_robots:'Search robots by brand or model…', brand_search:'Search brands…', all_categories:'All categories', all_countries:'All countries', search_rfq:'Search leads by name, company, email…',
     rfq_status:'Status', status_pending:'Pending', status_done:'Processed', mark_done:'Mark processed', mark_pending:'Mark pending', filter_status:'Status', all_status:'All statuses', prev:'Prev', next:'Next', per_page:'Per page', page_info:'Page {p} of {n}', export_csv:'Export CSV', exp_robots:'Export robots', exp_rfq:'Export RFQ', exp_brands:'Export brands',
     theme_light:'Light', theme_dark:'Dark', search_ph:'Search robots, brands or models…',
     results:'results', all:'All',
@@ -19,7 +19,7 @@ const I18N = {
     fav:'Favorite', fav_on:'Saved', fav_title:'My Favorites', fav_sub:'Robots you saved for later', recent:'Recently viewed', fav_empty:'No favorites yet', fav_empty_sub:'Tap the ★ on any robot to save it here.', browse:'Browse catalog', clear_fav:'Clear favorites',
     add_all_cmp:'Add all to compare', fav_group_all:'All', tag_add_hint:'Add tag…', tag_edit:'Edit tag', tag_new_name:'New name', tag_color:'Color', tag_delete:'Delete', tag_cancel:'Cancel', tag_save:'Save', tag_overview:'Tag overview', tag_overview_sub:'Sorted by count · click to filter · ✎ rename/recolor/delete', tag_empty:'No tags yet', tag_empty_sub:'Type a tag on any robot card to start grouping your favorites & recent views.', tag_sort:'Sort', tag_sort_count_desc:'Count ↓', tag_sort_count_asc:'Count ↑', tag_sort_name:'Name', sel:'Select', sel_done:'Done', tag_merge:'Merge into', tag_merge_btn:'Merge', batch_tag:'Tag name', batch_apply:'Apply tag', batch_all:'Select all', batch_clear:'Clear', batch_sel_prefix:'Selected ', batch_sel_suffix:' items', sel_share:'Share', sel_share_done:'Share link copied', sel_share_empty:'Select items first', sel_restored:'Restored selections from link',
     compare:'Compare', compare_now:'Compare now', clear:'Clear', request_quote:'Request Quote', view_detail:'View details',
-    spec_payload:'Payload', spec_reach:'Reach', spec_dof:'DOF', spec_weight:'Weight', spec_year:'Year', spec_speed:'Speed', spec_country:'Origin', spec_autonomy:'Autonomy', spec_category:'Category', spec_brand:'Brand', spec_price:'Price',
+    spec_payload:'Payload', spec_reach:'Reach', spec_dof:'DOF', spec_weight:'Weight', spec_year:'Year', spec_speed:'Speed', spec_country:'Origin', spec_autonomy:'Autonomy', spec_category:'Category', spec_quickview:'Spec quick view', spec_brand:'Brand', spec_price:'Price',
     applications:'Applications', related:'Related robots', back:'Back',
     rfq_title:'Request a Quote', rfq_sub:'Send an enquiry directly to the supplier. No checkout, no commission.',
     rfq_name:'Your name', rfq_company:'Company', rfq_email:'Email', rfq_phone:'Phone', rfq_msg:'Message', submit:'Submit', cancel:'Cancel', rfq_ok:'Enquiry sent! The supplier will contact you.',
@@ -44,7 +44,7 @@ const I18N = {
     featured_title:'精选机器人', featured_sub:'跨类目精选旗舰型号',
     latest_title:'最新收录', latest_sub:'数据库中的最新型号',
     filters:'筛选', f_category:'类目', f_brand:'品牌', f_country:'国家/地区', f_autonomy:'自主度', reset:'重置筛选',
-    sort_by:'排序', sort_featured:'精选优先', sort_year:'最新', sort_payload:'负载', sort_price:'价格', sort_views:'热门', sort_name:'名称', sort_models:'型号数', sort_country:'国家/地区', group_by:'分组', group_letter:'按字母', group_country:'按国家', search_robots:'按品牌或型号搜索…', all_categories:'全部分类', all_countries:'全部国家', search_rfq:'按姓名/公司/邮箱搜索询盘…',
+    sort_by:'排序', sort_featured:'精选优先', sort_year:'最新', sort_payload:'负载', sort_price:'价格', sort_views:'热门', sort_name:'名称', sort_models:'型号数', sort_country:'国家/地区', group_by:'分组', group_letter:'按字母', group_country:'按国家', search_robots:'按品牌或型号搜索…', brand_search:'搜索品牌…', all_categories:'全部分类', all_countries:'全部国家', search_rfq:'按姓名/公司/邮箱搜索询盘…',
     rfq_status:'状态', status_pending:'待处理', status_done:'已处理', mark_done:'标记已处理', mark_pending:'标记待处理', filter_status:'状态', all_status:'全部状态', prev:'上一页', next:'下一页', per_page:'每页', page_info:'第 {p} / {n} 页', export_csv:'导出 CSV', exp_robots:'导出机器人', exp_rfq:'导出询盘', exp_brands:'导出品牌',
     theme_light:'浅色', theme_dark:'深色', search_ph:'搜索机器人、品牌或型号…',
     results:'个结果', all:'全部',
@@ -52,7 +52,7 @@ const I18N = {
     fav:'收藏', fav_on:'已收藏', fav_title:'我的收藏', fav_sub:'你保存下来稍后查看的机器人', recent:'最近浏览', fav_empty:'还没有收藏', fav_empty_sub:'点任意机器人上的 ★ 即可收藏到这里。', browse:'去产品库看看', clear_fav:'清空收藏',
     add_all_cmp:'全部加入对比', fav_group_all:'全部', tag_add_hint:'添加标签…', tag_edit:'编辑标签', tag_new_name:'新名称', tag_color:'颜色', tag_delete:'删除', tag_cancel:'取消', tag_save:'保存', tag_overview:'标签概览', tag_overview_sub:'按数量排序 · 点击筛选 · ✎ 改名/换色/删除', tag_empty:'还没有标签', tag_empty_sub:'在任意机器人卡片的标签栏输入文字即可归类收藏与最近浏览。', tag_sort:'排序', tag_sort_count_desc:'数量 ↓', tag_sort_count_asc:'数量 ↑', tag_sort_name:'名称', sel:'选择', sel_done:'完成', tag_merge:'合并到', tag_merge_btn:'合并', batch_tag:'标签名', batch_apply:'打标签', batch_all:'全选', batch_clear:'清空', batch_sel_prefix:'已选 ', batch_sel_suffix:' 项', sel_share:'分享', sel_share_done:'分享链接已复制', sel_share_empty:'请先选择机器人', sel_restored:'已从链接恢复选择',
     compare:'对比', compare_now:'立即对比', clear:'清空', request_quote:'询价', view_detail:'查看详情',
-    spec_payload:'负载', spec_reach:'臂展', spec_dof:'自由度', spec_weight:'重量', spec_year:'年份', spec_speed:'速度', spec_country:'产地', spec_autonomy:'自主度', spec_category:'类目', spec_brand:'品牌', spec_price:'价格',
+    spec_payload:'负载', spec_reach:'臂展', spec_dof:'自由度', spec_weight:'重量', spec_year:'年份', spec_speed:'速度', spec_country:'产地', spec_autonomy:'自主度', spec_category:'类目', spec_quickview:'规格速览', spec_brand:'品牌', spec_price:'价格',
     applications:'应用场景', related:'相关机器人', back:'返回',
     rfq_title:'发起询价', rfq_sub:'直接向供应商发送需求。无需下单，零佣金。',
     rfq_name:'您的姓名', rfq_company:'公司', rfq_email:'邮箱', rfq_phone:'电话', rfq_msg:'留言', submit:'提交', cancel:'取消', rfq_ok:'询价已发送！供应商将与您联系。',
@@ -337,6 +337,7 @@ function applySelFromUrl(){
 let SEL_GROUP_MODE='category';   // category | brand
 let SEL_LIST_OPEN=false;
 let SEL_LIST_FILTER='all';
+let SEL_LIST_SRC_FILTER='all';
 const selGroupCollapsed={};
 function _selMeta(id){
   if(window.ROBOTHUB_STATIC && window.ROBOTHUB_ROBOTS){
@@ -360,9 +361,10 @@ function renderSelList(){
   // 本页可见 id 集合（用于"仅本页"视图过滤与来源标记）
   let visIds=null;
   if(SEL_LIST_FILTER==='page'){ visIds=new Set([].slice.call(document.querySelectorAll('.rcard[data-id],.lrow[data-id]')).map(e=>e.getAttribute('data-id'))); }
-  const metas=ids.map(_selMeta).filter(m=> !visIds || visIds.has(m.id));
-  if(!metas.length){ box.innerHTML='<div class="sel-empty">'+(LANG==='zh'?'本页暂无已选项':'No items on this page')+'</div>'; return; }
+  let metas=ids.map(_selMeta).filter(m=> !visIds || visIds.has(m.id));
   const isOnPage=id=> visIds ? visIds.has(id) : !!document.querySelector('.rcard[data-id="'+esc(id)+'"],.lrow[data-id="'+esc(id)+'"]');
+  if(SEL_LIST_SRC_FILTER!=='all'){ metas = metas.filter(m=> SEL_LIST_SRC_FILTER==='page' ? isOnPage(m.id) : !isOnPage(m.id)); }
+  if(!metas.length){ box.innerHTML='<div class="sel-empty">'+(LANG==='zh'?'当前筛选下暂无已选项':'No items for this filter')+'</div>'; return; }
   const groups={};
   metas.forEach(m=>{ const k=(SEL_GROUP_MODE==='brand'?(m.brand||(LANG==='zh'?'未命名':'Unknown')):(m.category||(LANG==='zh'?'未分类':'Uncategorized'))); (groups[k]=groups[k]||[]).push(m); });
   const keys=Object.keys(groups).sort((a,b)=>groups[b].length-groups[a].length||a.localeCompare(b));
@@ -370,11 +372,20 @@ function renderSelList(){
   const tBrand=LANG==='zh'?'按品牌':'By brand';
   const tAll=LANG==='zh'?'全部':'All';
   const tPage=LANG==='zh'?'仅本页':'This page';
+  const tSrcAll=LANG==='zh'?'全部来源':'All sources';
+  const tSrcPage=LANG==='zh'?'仅本页':'On this page';
+  const tSrcCross=LANG==='zh'?'仅跨页':'Other pages';
   box.innerHTML = `<div class="sel-list-tabs">
       <button class="sel-tab ${SEL_LIST_FILTER==='all'?'on':''}" type="button" onclick="setSelListFilter('all')">${tAll}</button>
       <button class="sel-tab ${SEL_LIST_FILTER==='page'?'on':''}" type="button" onclick="setSelListFilter('page')">${tPage}</button>
       <button class="sel-tab ${SEL_GROUP_MODE==='category'?'on':''}" type="button" onclick="setSelGroupMode('category')">${tCat}</button>
       <button class="sel-tab ${SEL_GROUP_MODE==='brand'?'on':''}" type="button" onclick="setSelGroupMode('brand')">${tBrand}</button>
+    </div>
+    <div class="sel-list-tabs src">
+      <span class="sel-tabs-label">${LANG==='zh'?'来源':'Source'}</span>
+      <button class="sel-tab ${SEL_LIST_SRC_FILTER==='all'?'on':''}" type="button" onclick="setSelSrcFilter('all')">${tSrcAll}</button>
+      <button class="sel-tab ${SEL_LIST_SRC_FILTER==='page'?'on':''}" type="button" onclick="setSelSrcFilter('page')">${tSrcPage}</button>
+      <button class="sel-tab ${SEL_LIST_SRC_FILTER==='cross'?'on':''}" type="button" onclick="setSelSrcFilter('cross')">${tSrcCross}</button>
     </div>`
     + keys.map(k=>{
         const ek=esc(k); const arr=groups[k]; const collapsed=selGroupCollapsed[ek]?'collapsed':'';
@@ -387,7 +398,7 @@ function renderSelList(){
           <div class="sel-group-body">
             ${arr.map(m=>{ const onPage=isOnPage(m.id); const srcCls=onPage?'src-page':'src-cross'; const srcTxt=onPage?(LANG==='zh'?'本页':'Here'):(LANG==='zh'?'跨页':'Other'); return `<div class="sel-item">
               <span class="si-main">${esc(m.model||m.id)}${m.brand?` <span class="si-brand">${esc(m.brand)}</span>`:''}</span>
-              <span class="si-src ${srcCls}">${srcTxt}</span>
+              <span class="si-src ${srcCls}" role="button" tabindex="0" title="${LANG==='zh'?'点击仅看'+srcTxt:'Filter to '+srcTxt}" onclick="setSelSrcFilter('${onPage?'page':'cross'}')">${srcTxt}</span>
               <button class="si-x" type="button" title="${LANG==='zh'?'移除':'Remove'}" onclick="removeSelOne('${esc(m.id)}')">×</button>
             </div>`; }).join('')}
           </div>
@@ -395,6 +406,7 @@ function renderSelList(){
       }).join('');
 }
 function setSelListFilter(f){ SEL_LIST_FILTER=f; if(SEL_LIST_OPEN) renderSelList(); }
+function setSelSrcFilter(f){ SEL_LIST_SRC_FILTER=f; if(SEL_LIST_OPEN) renderSelList(); }
 function toggleSelList(f){ const nf=(f===undefined)?SEL_LIST_FILTER:f; if(SEL_LIST_OPEN && SEL_LIST_FILTER===nf){ SEL_LIST_OPEN=false; const bar=document.getElementById('selBar'); if(bar) bar.classList.remove('expanded'); renderSelList(); return; } SEL_LIST_FILTER=nf; SEL_LIST_OPEN=true; const bar=document.getElementById('selBar'); if(bar) bar.classList.add('expanded'); renderSelList(); }
 function setSelGroupMode(m){ SEL_GROUP_MODE=m; if(SEL_LIST_OPEN) renderSelList(); }
 function toggleSelGroup(headEl){ const g=headEl?headEl.parentElement:null; if(g){ const ek=g.dataset.key; g.classList.toggle('collapsed'); selGroupCollapsed[ek]=g.classList.contains('collapsed'); } }

@@ -21,7 +21,7 @@
       <button class="btn btn-ghost" id="diffBtn" onclick="toggleDiff()" data-i="diff_only" title="Hide rows where all robots are identical"></button>
       <button class="btn btn-ghost" onclick="copyLink()" data-i="share_link"></button>
       <button class="btn btn-ghost cmp-print-btn" id="printBtn" onclick="printCompare()" style="display:none">🖨 <span data-i="cmp_print"></span></button>
-      <button class="btn btn-primary cmp-export" id="expBtn" onclick="exportCsv()" style="display:none" data-i="cmp_export"></button>
+      <button class="btn btn-primary cmp-export" id="expBtn" onclick="exportCompareCsv()" style="display:none" data-i="cmp_export"></button>
     </div>
   </div>
   <div class="cmp-filterbar">
@@ -68,7 +68,7 @@ function buildRows(){
   ];
 }
 function csvCell(v){ if(v==null||v==='') v='—'; return '"'+String(v).replace(/"/g,'""')+'"'; }
-function exportCsv(){
+function exportCompareCsv(){
   if(!CMP_ITEMS.length) return;
   const rows=buildRows();
   const head=['Model', ...CMP_ITEMS.map(r=>r.brand+' '+r.model)];

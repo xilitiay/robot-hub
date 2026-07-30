@@ -74,6 +74,7 @@ let DATA=null;      // 最近一次接口结果（total/hero 等）
 let TOTAL=0, loading=false, finished=false;
 
 function buildFilters(){
+  if(!META || !META.stats) return;   // 兜底：meta 尚未加载完成时不要在 stats 上崩溃
   const s=META.stats;
   const grp=(title,key,opts)=>`<div class="filter-group"><h4 data-i="${title}"></h4>
     <div class="filter-opt ${!state[key]?'on':''}" onclick="setF('${key}','')"><span data-i="all"></span></div>

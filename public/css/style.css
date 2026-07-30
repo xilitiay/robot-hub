@@ -132,7 +132,9 @@ body.selecting .rcard.sel{border-color:var(--primary);box-shadow:0 0 0 1px var(-
 #selBar.expanded .sb-caret{transform:rotate(180deg)}
 #selBar .sel-list{display:none;pointer-events:auto;width:min(calc(100% - 24px),720px);max-height:52vh;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(15,23,42,.18);padding:6px 0}
 #selBar.expanded .sel-list{display:block}
-#selBar .sel-list-tabs{display:flex;gap:6px;padding:6px 12px 10px}
+#selBar .sel-list-tabs{display:flex;gap:6px;padding:6px 12px 10px;flex-wrap:wrap;align-items:center}
+#selBar .sel-list-tabs.src{margin-top:2px;padding-top:8px;border-top:1px solid var(--line)}
+#selBar .sel-tabs-label{font-size:11.5px;font-weight:700;color:var(--muted);margin-right:2px;text-transform:uppercase;letter-spacing:.04em}
 #selBar .sel-tab{font-size:12.5px;font-weight:600;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:5px 12px;cursor:pointer}
 #selBar .sel-tab.on{color:#fff;background:var(--primary);border-color:var(--primary)}
 #selBar .sel-group{border-top:1px solid var(--line)}
@@ -602,7 +604,9 @@ body.selecting .rcard.sel{border-color:var(--primary);box-shadow:0 0 0 1px var(-
 .bulk-prog.global.clickable:hover{text-decoration:underline;filter:brightness(.92)}
 .bulk-prog.clickable{cursor:pointer}
 .bulk-prog.clickable:hover{text-decoration:underline;filter:brightness(.92)}
-.si-src{font-size:10.5px;line-height:1;padding:1px 6px;border-radius:6px;margin-left:6px;flex:0 0 auto;white-space:nowrap}
+.si-src{font-size:10.5px;line-height:1;padding:1px 6px;border-radius:6px;margin-left:6px;flex:0 0 auto;white-space:nowrap;cursor:pointer;transition:transform .1s,box-shadow .1s}
+.si-src:hover{transform:translateY(-1px);box-shadow:0 2px 6px rgba(15,23,42,.16)}
+.si-src:active{transform:translateY(0)}
 .si-src.src-page{background:rgba(16,185,129,.16);color:#0f9d6b}
 .si-src.src-cross{background:rgba(124,124,140,.16);color:#8a8a96}
 .sel-empty{padding:14px 4px;color:var(--muted);font-size:13px;text-align:center}

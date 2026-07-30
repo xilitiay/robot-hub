@@ -6,3 +6,19 @@ db/*.db
 .idea/
 .vscode/
 dist/
+
+# Build / output artifacts
+.next/
+build/
+out/
+outputs/
+_p.html
+*preview*
+
+# Runtime / mutable data (never share)
+runtime/
+*.db
+robot-hub.db
+
+# Local project / agent state
+.workbuddy/
