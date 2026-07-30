@@ -72,12 +72,12 @@ copyDir(path.join(__dirname, 'public'), DIST);
 
 // inject bundle script before app.js in each HTML
 const pages = ['index.html', 'catalog.html', 'detail.html', 'compare.html', 'brands.html', 'admin.html', 'favorites.html'];
-const re = /<script src=["']\/js\/app\.js["']><\/script>/;
+const re = /<script src=["']js\/app\.js["']><\/script>/;
 for (const pg of pages) {
   const f = path.join(DIST, pg);
   if (!fs.existsSync(f)) continue;
   let html = fs.readFileSync(f, 'utf8');
-  html = html.replace(re, '<script src="/static-bundle.js"></script>\n<script src="/js/app.js"></script>');
+  html = html.replace(re, '<script src="static-bundle.js"></script>\n<script src="js/app.js"></script>');
   fs.writeFileSync(f, html, 'utf8');
 }
 

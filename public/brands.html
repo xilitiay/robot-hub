@@ -7,10 +7,10 @@
 <meta name="description" content="全球领先机器人制造商一览，按字母或国家浏览品牌、型号数量与产地。RobotHub。">
 <title>Brands · 品牌 — RobotHub</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
-<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<script src="/js/app.js"></script>
+<script src="js/app.js"></script>
 
 <div class="container" style="padding-top:32px">
   <div class="section-head"><div>
@@ -62,7 +62,7 @@ function brandCard(b){
   const cats=(b.cats||[]).map(id=>{const c=(META.categories||[]).find(x=>x.id===id);return c?(LANG==='zh'?c.zh:c.en):id;});
   const ini=brandInitials(b.brand);
   const hue=brandHue(b.brand);
-  return `<a class="brand-card" href="/catalog.html?brand=${encodeURIComponent(b.brand)}">
+  return `<a class="brand-card" href="catalog.html?brand=${encodeURIComponent(b.brand)}">
     <div class="bhead">
       <span class="blogo" style="--h:${hue}" aria-hidden="true">${ini}</span>
       <div class="btxt">

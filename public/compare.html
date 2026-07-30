@@ -7,10 +7,10 @@
 <meta name="description" content="并排对比多款机器人参数与价格，快速选型。RobotHub 全球机器人产品库。">
 <title>Compare · 对比 — RobotHub</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
-<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<script src="/js/app.js"></script>
+<script src="js/app.js"></script>
 
 <div class="container" style="padding:32px 0 80px">
   <div class="section-head"><div>
@@ -138,7 +138,7 @@ async function render(){
   const root=document.getElementById('root');
   const expBtn=document.getElementById('expBtn');
   if(!ids.length){
-    root.innerHTML=`<div class="empty"><div class="e">⚖️</div><p data-i="cmp_empty"></p><a class="btn btn-primary" style="margin-top:16px" href="/catalog.html" data-i="nav_catalog"></a></div>`;
+    root.innerHTML=`<div class="empty"><div class="e">⚖️</div><p data-i="cmp_empty"></p><a class="btn btn-primary" style="margin-top:16px" href="catalog.html" data-i="nav_catalog"></a></div>`;
     applyI18n(); expBtn.style.display='none';
     const sub=document.getElementById('cmpSub'); if(sub) sub.textContent='';
     const cnt=document.getElementById('cmpRowCount'); if(cnt) cnt.textContent='';
@@ -182,7 +182,7 @@ function drawTable(){
     row._show=show;
   });
   let h='<div class="cmp-scroll"><div class="cmp-scroll-hint" data-i="swipe_hint"></div><div style="overflow-x:auto"><table class="cmp-table"><tr><th class="rowlabel"></th>'+items.map(r=>`<th draggable="true" data-id="${r.id}" ondragstart="onCmpDragStart(event,'${r.id}')" ondragover="onCmpDragOver(event)" ondrop="onCmpDrop(event,'${r.id}')">${r.model}<div style="font-weight:400;color:var(--muted);font-size:12.5px">${LANG==='zh'?(r.brandZh||r.brand):r.brand}</div><span class="drag-h" title="${t('drag_sort')}">⠿</span><span class="ord-btns"><button class="ob" title="↑" onclick="moveCmp(event,'${r.id}',-1)">▲</button><button class="ob" title="↓" onclick="moveCmp(event,'${r.id}',1)">▼</button></span></th>`).join('')+'</tr>';
-  h+='<tr><td class="rowlabel"></td>'+items.map(r=>`<td style="text-align:center"><a href="/detail.html?id=${r.id}"><span class="emoji">${EMOJI[r.category]}</span></a><div><button class="op del" style="color:var(--red);font-size:12.5px;font-weight:600;margin-top:6px" onclick="rm('${r.id}')">✕ ${LANG==='zh'?'移除':'Remove'}</button></div></td>`).join('')+'</tr>';
+  h+='<tr><td class="rowlabel"></td>'+items.map(r=>`<td style="text-align:center"><a href="detail.html?id=${r.id}"><span class="emoji">${EMOJI[r.category]}</span></a><div><button class="op del" style="color:var(--red);font-size:12.5px;font-weight:600;margin-top:6px" onclick="rm('${r.id}')">✕ ${LANG==='zh'?'移除':'Remove'}</button></div></td>`).join('')+'</tr>';
   rows.forEach(row=>{
     if(!row._show) return;
     if(DIFF_ONLY && !row.alwaysShow && row._uniform) return; // 隐藏相同行
@@ -193,7 +193,7 @@ function drawTable(){
   // 剩余空位占位，引导继续添加
   const slots=Math.max(0,CMP_MAX-items.length);
   if(slots>0){
-    h+=`<tr><td class="rowlabel"></td><td class="cmp-slot" colspan="${items.length}"><a href="/catalog.html" class="slot-add"><span class="plus">＋</span> ${t('cmp_add')}</a></td></tr>`;
+    h+=`<tr><td class="rowlabel"></td><td class="cmp-slot" colspan="${items.length}"><a href="catalog.html" class="slot-add"><span class="plus">＋</span> ${t('cmp_add')}</a></td></tr>`;
   }
   h+='</table></div></div>';
   wrap.innerHTML=h;

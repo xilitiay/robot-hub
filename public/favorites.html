@@ -7,10 +7,10 @@
 <meta name="description" content="我的收藏与最近浏览 — RobotHub 全球机器人产品库。">
 <title>我的收藏 — RobotHub</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
-<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<script src="/js/app.js"></script>
+<script src="js/app.js"></script>
 
 <div class="container">
   <section class="fav-hero">
@@ -198,7 +198,7 @@ async function renderFav(){
   document.getElementById('favAddCmp').style.display=getFavs().length?'inline-flex':'none';
   grid.innerHTML = items.length
     ? items.map(robotCard).join('')
-    : `<div class="empty" style="grid-column:1/-1"><div class="e">⭐</div><h3 data-i="fav_empty"></h3><p data-i="fav_empty_sub"></p><a class="btn btn-primary" href="/catalog.html" data-i="browse" style="margin-top:18px"></a></div>`;
+    : `<div class="empty" style="grid-column:1/-1"><div class="e">⭐</div><h3 data-i="fav_empty"></h3><p data-i="fav_empty_sub"></p><a class="btn btn-primary" href="catalog.html" data-i="browse" style="margin-top:18px"></a></div>`;
   applyI18n();
   renderFavTagBar();
   renderTagOverview();

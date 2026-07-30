@@ -7,10 +7,10 @@
 <meta name="description" content="查看机器人详细参数：负载、臂展、自由度、重量、年份、价格与自主度。RobotHub 全球机器人产品库。">
 <title>Robot Detail — RobotHub</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
-<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<script src="/js/app.js"></script>
+<script src="js/app.js"></script>
 
 <div class="container detail">
   <div class="print-head" id="printHead" aria-hidden="true">
@@ -75,7 +75,7 @@ async function render(){
   document.title=`${r.brand} ${r.model} — RobotHub`;
   pushRecent(r.id);
   document.getElementById('root').innerHTML=`
-    <div class="breadcrumb"><a href="/">RobotHub</a> / <a href="/catalog.html?category=${r.category}">${LANG==='zh'?cat.zh:cat.en}</a> / ${r.model}</div>
+    <div class="breadcrumb"><a href="./">RobotHub</a> / <a href="catalog.html?category=${r.category}">${LANG==='zh'?cat.zh:cat.en}</a> / ${r.model}</div>
     <div class="detail-top cat-${r.category}">
       <div class="detail-media"><div class="grid-deco"></div><span class="wm">${brandInitials(r.brand)}</span><span class="emoji">${EMOJI[r.category]}</span>${r.featured?`<span class="feat" style="top:16px;left:16px">★ ${LANG==='zh'?'精选':'FEATURED'}</span>`:''}</div>
       <div class="detail-info">
@@ -102,7 +102,7 @@ async function render(){
           <button class="btn btn-ghost fav-act ${getFavs().includes(r.id)?'on':''}" id="favBtn" data-id="${r.id}" onclick="toggleFav('${r.id}');syncFav('${r.id}')">${getFavs().includes(r.id)?'★ '+t('fav_on'):'☆ '+t('fav')}</button>
           <button class="btn btn-ghost" onclick="toggleCmp('${r.id}')" data-i="compare"></button>
           <button class="btn btn-ghost" onclick="printRobot()" data-i="cmp_print"></button>
-          <a class="btn btn-ghost" href="/catalog.html?category=${r.category}" data-i="back"></a>
+          <a class="btn btn-ghost" href="catalog.html?category=${r.category}" data-i="back"></a>
         </div>
       </div>
     </div>

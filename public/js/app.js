@@ -570,7 +570,7 @@ function setupSearch(input, box){
     if(v.length < 1){ box.style.display='none'; return; }
     const d = await api('/api/robots?q='+encodeURIComponent(v)+'&limit=6');
     if(!d.items || !d.items.length){ box.style.display='none'; return; }
-    box.innerHTML = d.items.map(r=>`<a class="sug" href="/detail.html?id=${r.id}">
+    box.innerHTML = d.items.map(r=>`<a class="sug" href="detail.html?id=${r.id}">
       <span class="si">${EMOJI[r.category]||'🤖'}</span>
       <span class="st"><b>${r.brand} ${r.model}</b><i>${r.countryInfo?r.countryInfo.flag+' ':''}${(META?.categories||[]).find(c=>c.id===r.category)?(LANG==='zh'?(META.categories.find(c=>c.id===r.category).zh):(META.categories.find(c=>c.id===r.category).en)):r.category}</i></span>
     </a>`).join('');
@@ -579,39 +579,39 @@ function setupSearch(input, box){
   const onType = debounce(render, 200);
   input.addEventListener('input', onType);
   input.addEventListener('focus', onType);
-  input.addEventListener('keydown', e=>{ if(e.key==='Enter' && input.value.trim()){ location.href='/catalog.html?q='+encodeURIComponent(input.value.trim()); } });
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter' && input.value.trim()){ location.href='catalog.html?q='+encodeURIComponent(input.value.trim()); } });
   input.addEventListener('blur', ()=> setTimeout(()=>box.style.display='none', 180));
   box.addEventListener('mousedown', e=> e.preventDefault());
 }
 
 /* ---- Header / Footer ---- */
 function renderChrome(active){
-  const adminLink = STATIC_MODE ? '' : `<a href="/admin.html" data-i="nav_admin" class="${active==='admin'?'active':''}"></a>`;
+  const adminLink = STATIC_MODE ? '' : `<a href="admin.html" data-i="nav_admin" class="${active==='admin'?'active':''}"></a>`;
   const header=`<header class="site-header"><div class="container"><nav class="nav">
-    <a class="logo" href="/"><span class="mark">🤖</span><span>Robot<b>Hub</b></span></a>
+    <a class="logo" href="./"><span class="mark">🤖</span><span>Robot<b>Hub</b></span></a>
     <div class="nav-links">
-      <a href="/" data-i="nav_home" class="${active==='home'?'active':''}"></a>
-      <a href="/catalog.html" data-i="nav_catalog" class="${active==='catalog'?'active':''}"></a>
-      <a href="/brands.html" data-i="nav_brands" class="${active==='brands'?'active':''}"></a>
-      <a href="/compare.html" data-i="nav_compare" class="${active==='compare'?'active':''}"></a>
-      <a href="/favorites.html" data-i="nav_fav" class="${active==='favorites'?'active':''}"></a>
+      <a href="./" data-i="nav_home" class="${active==='home'?'active':''}"></a>
+      <a href="catalog.html" data-i="nav_catalog" class="${active==='catalog'?'active':''}"></a>
+      <a href="brands.html" data-i="nav_brands" class="${active==='brands'?'active':''}"></a>
+      <a href="compare.html" data-i="nav_compare" class="${active==='compare'?'active':''}"></a>
+      <a href="favorites.html" data-i="nav_fav" class="${active==='favorites'?'active':''}"></a>
       ${adminLink}
     </div>
     <div class="nav-right">
       <button class="theme-toggle" onclick="toggleTheme()" title="Theme">🌙</button>
       <div class="lang-toggle"><button data-l="zh" onclick="setLang('zh')">中</button><button data-l="en" onclick="setLang('en')">EN</button></div>
-      <a class="btn btn-primary" href="/catalog.html" data-i="nav_catalog"></a>
+      <a class="btn btn-primary" href="catalog.html" data-i="nav_catalog"></a>
     </div></nav></div></header>`;
   const foot=`<footer class="site-footer"><div class="container"><div class="footer-grid">
     <div class="footer-brand"><div class="logo"><span class="mark">🤖</span><span>Robot<b style="color:#818cf8">Hub</b></span></div><p data-i="foot_about"></p></div>
-    <div><h4 data-i="foot_explore"></h4><a href="/catalog.html" data-i="nav_catalog"></a><a href="/brands.html" data-i="nav_brands"></a><a href="/compare.html" data-i="nav_compare"></a><a href="/favorites.html" data-i="nav_fav"></a></div>
+    <div><h4 data-i="foot_explore"></h4><a href="catalog.html" data-i="nav_catalog"></a><a href="brands.html" data-i="nav_brands"></a><a href="compare.html" data-i="nav_compare"></a><a href="favorites.html" data-i="nav_fav"></a></div>
     <div><h4 data-i="foot_company"></h4><a href="#">About</a><a href="#">Blog</a><a href="#">Contact</a></div>
     <div><h4 data-i="foot_legal"></h4><a href="#">Privacy</a><a href="#">Terms</a></div>
     </div><div class="footer-bottom">© 2026 <span data-i="foot_rights"></span></div></div></footer>
     <div class="compare-tray" id="cmpTray"><div class="inner">
       <span class="lbl" data-i="compare"></span><div class="items" id="cmpItems"></div>
       <button class="btn btn-ghost" onclick="setCmp([])" data-i="clear"></button>
-      <a class="btn btn-primary" href="/compare.html" data-i="compare_now"></a>
+      <a class="btn btn-primary" href="compare.html" data-i="compare_now"></a>
     </div></div>`;
   document.body.insertAdjacentHTML('afterbegin',header);
   document.body.insertAdjacentHTML('beforeend',foot);
@@ -647,7 +647,7 @@ function robotCard(r){
   return `<div class="rcard cat-${r.category}${sel?' sel':''}" data-id="${r.id}">
     <button type="button" class="sel-btn" data-id="${r.id}" onclick="toggleCardSel('${r.id}')" title="${LANG==='zh'?'选择':'Select'}"><span class="check">✓</span></button>
     <button type="button" class="fav-btn ${fav?'on':''}" data-id="${r.id}" onclick="toggleFav('${r.id}')" aria-label="${t('fav')}" title="${t('fav')}">${fav?'★':'☆'}</button>
-    <a class="thumb" href="/detail.html?id=${r.id}">
+    <a class="thumb" href="detail.html?id=${r.id}">
       <span class="watermark">${brandInitials(r.brand)}</span>
       <span class="emoji">${EMOJI[r.category]||'🤖'}</span>
       ${r.featured?`<span class="feat">★ ${LANG==='zh'?'精选':'FEATURED'}</span>`:''}
@@ -659,7 +659,7 @@ function robotCard(r){
         <span class="tag auto">${autoLabel?(LANG==='zh'?autoLabel.zh:autoLabel.en):r.autonomy}</span>
       </div>
       <div class="brand">${LANG==='zh'?(r.brandZh||r.brand):r.brand}</div>
-      <h3><a href="/detail.html?id=${r.id}">${r.model}</a></h3>
+      <h3><a href="detail.html?id=${r.id}">${r.model}</a></h3>
       <div class="specs">${specs.map(s=>`<span class="spec">${s}</span>`).join('')}</div>
       <div class="foot">
         <span class="price">${r.priceText||'—'}</span>
@@ -682,7 +682,7 @@ function robotListRow(r){
   const catLabel=(META?.categories||[]).find(c=>c.id===r.category);
   const sel=getSel().has(r.id);
   return `<div class="lrow cat-${r.category}${sel?' sel':''}" data-id="${r.id}">
-    <a class="lthumb" href="/detail.html?id=${r.id}"><span class="emoji">${EMOJI[r.category]||'🤖'}</span>${r.featured?`<span class="feat">★</span>`:''}</a>
+    <a class="lthumb" href="detail.html?id=${r.id}"><span class="emoji">${EMOJI[r.category]||'🤖'}</span>${r.featured?`<span class="feat">★</span>`:''}</a>
     <div class="linfo">
       <div class="ltags"><span class="tag cat">${catLabel?(LANG==='zh'?catLabel.zh:catLabel.en):r.category}</span><span class="tag auto">${autoLabel?(LANG==='zh'?autoLabel.zh:autoLabel.en):r.autonomy}</span>${r.countryInfo?`<span class="lflag">${r.countryInfo.flag}</span>`:''}</div>
       <div class="lname"><b>${LANG==='zh'?(r.brandZh||r.brand):r.brand}</b> ${r.model}</div>
