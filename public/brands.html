@@ -83,6 +83,7 @@ function highlightActive(K){
 }
 // scroll-spy: highlight the group (letter or country) currently in view
 function setupScrollSpy(){
+  if(typeof IntersectionObserver==='undefined') return;
   if(azObserver) azObserver.disconnect();
   azObserver=new IntersectionObserver((entries)=>{
     entries.forEach(e=>{ if(e.isIntersecting){ highlightActive(e.target.dataset.key); } });

@@ -16,10 +16,15 @@
   <div class="section-head"><div><h2 data-i="nav_catalog"></h2><p id="catSub"></p></div></div>
   <div class="cat-hero" id="catHero" style="display:none"></div>
   <div class="catalog">
-    <aside class="filters">
-      <h4 style="margin-bottom:4px" data-i="filters"></h4>
-      <div id="filterBody"></div>
-      <button class="reset" onclick="resetFilters()" data-i="reset"></button>
+    <aside class="filters" id="filters">
+      <div class="filters-head">
+        <h4 data-i="filters"></h4>
+        <button class="filters-toggle" id="filtersToggle" type="button" onclick="toggleFiltersPanel()" aria-expanded="true" aria-label="筛选">☰</button>
+      </div>
+      <div class="filter-body" id="filterBodyWrap">
+        <div id="filterBody"></div>
+        <button class="reset" onclick="resetFilters()" data-i="reset"></button>
+      </div>
     </aside>
     <main class="catalog-main">
       <div class="toolbar">
@@ -54,6 +59,7 @@
           </div>
         </div>
       </div>
+      <div class="active-filters" id="activeFilters"></div>
       <div class="robot-grid" id="grid"></div>
       <div id="sentinel"></div>
       <div id="footer"></div>
@@ -108,6 +114,31 @@ function setBrand(b){
 }
 function setF(k,v){ state[k]=v; state.page=1; buildFilters(); load(true); syncUrl(); }
 function resetFilters(){ Object.assign(state,{category:'',brands:[],country:'',autonomy:'',q:'',featured:'',page:1,brandQ:''}); const cs=document.getElementById('catSearch'); if(cs)cs.value=''; const cc=document.getElementById('catSearchClear'); if(cc)cc.style.display='none'; buildFilters(); load(true); syncUrl(); }
+
+/* ---- Collapsible filters (mobile) ---- */
+function toggleFiltersPanel(){
+  const f=document.getElementById('filters'); if(!f) return;
+  const c=f.classList.toggle('collapsed');
+  const t=document.getElementById('filtersToggle'); if(t) t.setAttribute('aria-expanded', c?'false':'true');
+}
+
+/* ---- Active filter chips (visible, individually removable) ---- */
+function renderActiveFilters(){
+  const box=document.getElementById('activeFilters'); if(!box) return;
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const chip=(fn,label)=>`<button class="af-chip" type="button" onclick="${fn}"><span>${esc(label)}</span><span class="af-x" aria-hidden="true">×</span></button>`;
+  const chips=[];
+  if(state.category){ const c=META.categories.find(x=>x.id===state.category); chips.push(chip(`setF('category','')`, (LANG==='zh'?'类目 · ':'Cat · ')+(c?(LANG==='zh'?c.zh:c.en):state.category))); }
+  if(state.brands.length){ state.brands.forEach(b=>{ const br=BRANDS.find(x=>x.brand===b); chips.push(chip(`setBrand('${esc(b)}')`, (LANG==='zh'?'品牌 · ':'Brand · ')+(br?(LANG==='zh'?(br.brandZh||br.brand):br.brand):b))); }); }
+  if(state.country){ const c=META.countries[state.country]; chips.push(chip(`setF('country','')`, (LANG==='zh'?'国家 · ':'Country · ')+(c?(LANG==='zh'?c.zh:c.en):state.country))); }
+  if(state.autonomy){ const a=META.autonomyLevels.find(x=>x.id===state.autonomy); chips.push(chip(`setF('autonomy','')`, (LANG==='zh'?'自主度 · ':'Autonomy · ')+(a?(LANG==='zh'?a.zh:a.en):state.autonomy))); }
+  if(state.q) chips.push(chip(`clearCatSearch()`, (LANG==='zh'?'搜索 · ':'Search · ')+state.q));
+  if(state.featured) chips.push(chip(`setF('featured','')`, LANG==='zh'?'精选':'Featured'));
+  if(chips.length){
+    box.innerHTML=`<span class="af-label">${LANG==='zh'?'已选筛选':'Filters'}</span>`+chips.join('')+`<button class="af-clear" type="button" onclick="resetFilters()">${LANG==='zh'?'清除全部':'Clear all'}</button>`;
+    box.classList.add('show');
+  } else { box.innerHTML=''; box.classList.remove('show'); }
+}
 
 let _catSearchT=null;
 function onCatSearch(v){
@@ -207,6 +238,7 @@ async function load(reset){
   finished=(data.page>=(data.pages||data.totalPages||1));
   loading=false;
   renderItems();
+  renderActiveFilters();
   if(finished && ALL.length===0) renderEmpty(true);
   updateFooter();
 }
@@ -233,6 +265,7 @@ async function init(){
   document.getElementById('sort').value=state.sort;
   updateViewBtns();
   applyI18n(); renderTray(); buildFilters();
+  if(window.innerWidth<=960){ const f=document.getElementById('filters'); if(f) f.classList.add('collapsed'); }
   document.addEventListener('selbasket', ()=>{ markCatalogSel(); updateBulkBtns(); });
   const cs=document.getElementById('catSearch'); if(cs){ cs.value=state.q||''; const cc=document.getElementById('catSearchClear'); if(cc) cc.style.display=state.q?'block':'none'; }
   load(true); setupObserver();

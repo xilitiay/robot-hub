@@ -601,7 +601,20 @@ function renderChrome(active){
       <button class="theme-toggle" onclick="toggleTheme()" title="Theme">🌙</button>
       <div class="lang-toggle"><button data-l="zh" onclick="setLang('zh')">中</button><button data-l="en" onclick="setLang('en')">EN</button></div>
       <a class="btn btn-primary" href="catalog.html" data-i="nav_catalog"></a>
-    </div></nav></div></header>`;
+      <button class="menu-toggle" id="menuToggle" type="button" onclick="toggleMobileMenu()" aria-label="Menu" aria-expanded="false">☰</button>
+    </div></nav></div>
+    <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
+      <a href="./" data-i="nav_home"></a>
+      <a href="catalog.html" data-i="nav_catalog"></a>
+      <a href="brands.html" data-i="nav_brands"></a>
+      <a href="compare.html" data-i="nav_compare"></a>
+      <a href="favorites.html" data-i="nav_fav"></a>
+      ${adminLink}
+      <div class="mm-extra">
+        <button class="theme-toggle" onclick="toggleTheme()" title="Theme">🌙</button>
+        <div class="lang-toggle"><button data-l="zh" onclick="setLang('zh')">中</button><button data-l="en" onclick="setLang('en')">EN</button></div>
+      </div>
+    </div></header>`;
   const foot=`<footer class="site-footer"><div class="container"><div class="footer-grid">
     <div class="footer-brand"><div class="logo"><span class="mark">🤖</span><span>Robot<b style="color:#818cf8">Hub</b></span></div><p data-i="foot_about"></p></div>
     <div><h4 data-i="foot_explore"></h4><a href="catalog.html" data-i="nav_catalog"></a><a href="brands.html" data-i="nav_brands"></a><a href="compare.html" data-i="nav_compare"></a><a href="favorites.html" data-i="nav_fav"></a></div>
@@ -618,6 +631,23 @@ function renderChrome(active){
   updateThemeBtn();
   injectExtras();
 }
+/* ---- Mobile menu (hamburger) ---- */
+function toggleMobileMenu(){
+  const m=document.getElementById('mobileMenu'); if(!m) return;
+  const open=m.classList.toggle('open');
+  m.setAttribute('aria-hidden', open?'false':'true');
+  const t=document.getElementById('menuToggle'); if(t) t.setAttribute('aria-expanded', open?'true':'false');
+}
+document.addEventListener('click', e=>{
+  const m=document.getElementById('mobileMenu'); if(!m || !m.classList.contains('open')) return;
+  if(!e.target.closest('.mobile-menu') && !e.target.closest('#menuToggle')){
+    m.classList.remove('open'); const t=document.getElementById('menuToggle'); if(t) t.setAttribute('aria-expanded','false');
+  }
+});
+window.addEventListener('resize', ()=>{
+  if(window.innerWidth>960){ const m=document.getElementById('mobileMenu'); if(m) m.classList.remove('open'); }
+});
+
 function renderTray(){
   const ids=getCmp(), tray=document.getElementById('cmpTray'); if(!tray) return;
   tray.classList.toggle('show',ids.length>0);
