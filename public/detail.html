@@ -100,7 +100,7 @@ async function render(){
         <div class="detail-actions">
           <button class="btn btn-primary" onclick="openRfq()" data-i="request_quote"></button>
           <button class="btn btn-ghost fav-act ${getFavs().includes(r.id)?'on':''}" id="favBtn" data-id="${r.id}" onclick="toggleFav('${r.id}');syncFav('${r.id}')">${getFavs().includes(r.id)?'★ '+t('fav_on'):'☆ '+t('fav')}</button>
-          <button class="btn btn-ghost" onclick="toggleCmp('${r.id}')" data-i="compare"></button>
+          <button class="btn btn-ghost cmp-add" id="detailCmp" data-id="${r.id}" onclick="toggleCmp('${r.id}');syncDetailCmp()" data-i="compare"></button>
           <button class="btn btn-ghost" onclick="printRobot()" data-i="cmp_print"></button>
           <a class="btn btn-ghost" href="catalog.html?category=${r.category}" data-i="back"></a>
         </div>
@@ -111,11 +111,19 @@ async function render(){
       <div class="robot-grid" id="relGrid">${d.related.map(robotCard).join('')}</div>
     </div>`;
   applyI18n();
+  syncDetailCmp();
   syncRelSelUI(); markRelSelected();
   setTimeout(()=>document.querySelectorAll('.spec-bars .fill').forEach(f=>f.style.width=f.dataset.w+'%'),80);
 }
 function openRfq(){ document.getElementById('rfqMask').classList.add('show'); }
 function closeRfq(){ document.getElementById('rfqMask').classList.remove('show'); }
+// 详情页「加入对比」按钮：根据对比篮状态显示 已加入 / 对比，并随其他页操作实时同步
+function syncDetailCmp(){
+  const b=document.getElementById('detailCmp'); if(!b) return;
+  const on=getCmp().includes(b.dataset.id);
+  b.classList.toggle('on',on);
+  b.textContent=(on?'✓ ':'＋ ')+(on?t('compared'):t('compare'));
+}
 function printRobot(){
   if(!ROBOT) return;
   const d=new Date(); const pad=n=>String(n).padStart(2,'0');
@@ -202,6 +210,7 @@ async function init(){
   document.getElementById('root').addEventListener('click', onRelGridClick);
   document.addEventListener('favchange',()=>{ REL_SEL.forEach(id=>syncFav(id)); });
   document.addEventListener('selbasket',()=>{ const g=getSel(); REL_SEL=new Set([...g].filter(id=>REL_IDS.includes(id))); markRelSelected(); updateRelBatchBar(); });
+  document.addEventListener('cmpchange',syncDetailCmp);
   document.addEventListener('langchange',render);
   render();
 }

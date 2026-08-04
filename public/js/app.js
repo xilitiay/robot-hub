@@ -442,7 +442,7 @@ function removeSelStore(id){ const s=getSel(); s.delete(id); setSel(s); }
 const CMP_KEY='cmp_ids';
 const CMP_MAX=6;
 const getCmp=()=>JSON.parse(localStorage.getItem(CMP_KEY)||'[]');
-const setCmp=(a)=>{localStorage.setItem(CMP_KEY,JSON.stringify(a.slice(0,CMP_MAX)));renderTray();};
+const setCmp=(a)=>{localStorage.setItem(CMP_KEY,JSON.stringify(a.slice(0,CMP_MAX)));renderTray();document.dispatchEvent(new Event('cmpchange'));};
 function toggleCmp(id){
   let a=getCmp();
   if(a.includes(id)){
@@ -562,26 +562,78 @@ function updateThemeBtn(){ document.querySelectorAll('.theme-toggle').forEach(b=
 // apply early so there is no flash
 document.documentElement.setAttribute('data-theme', getTheme());
 
-/* ---- Live search suggestions ---- */
+/* ---- Live search suggestions (robots + brands, highlight, keyboard nav) ---- */
 function setupSearch(input, box){
   if(!input||!box) return;
-  const render = async ()=>{
-    const v = input.value.trim();
-    if(v.length < 1){ box.style.display='none'; return; }
-    const d = await api('/api/robots?q='+encodeURIComponent(v)+'&limit=6');
-    if(!d.items || !d.items.length){ box.style.display='none'; return; }
-    box.innerHTML = d.items.map(r=>`<a class="sug" href="detail.html?id=${r.id}">
-      <span class="si">${EMOJI[r.category]||'🤖'}</span>
-      <span class="st"><b>${r.brand} ${r.model}</b><i>${r.countryInfo?r.countryInfo.flag+' ':''}${(META?.categories||[]).find(c=>c.id===r.category)?(LANG==='zh'?(META.categories.find(c=>c.id===r.category).zh):(META.categories.find(c=>c.id===r.category).en)):r.category}</i></span>
-    </a>`).join('');
-    box.style.display='block';
+  let active=-1;
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const hl=(text,q)=>{
+    const e=esc(text); if(!q) return e;
+    try{ return e.replace(new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig'),'<mark>$1</mark>'); }catch(e){ return e; }
   };
-  const onType = debounce(render, 200);
-  input.addEventListener('input', onType);
-  input.addEventListener('focus', onType);
-  input.addEventListener('keydown', e=>{ if(e.key==='Enter' && input.value.trim()){ location.href='catalog.html?q='+encodeURIComponent(input.value.trim()); } });
-  input.addEventListener('blur', ()=> setTimeout(()=>box.style.display='none', 180));
-  box.addEventListener('mousedown', e=> e.preventDefault());
+  const catLabel=id=>{ const c=(META?.categories||[]).find(x=>x.id===id); return c?(LANG==='zh'?c.zh:c.en):id; };
+  const brandName=b=>LANG==='zh'?(b.brandZh||b.brand):b.brand;
+  const close=()=>{ box.style.display='none'; active=-1; };
+  async function render(){
+    const v=input.value.trim();
+    if(v.length<1){ close(); return; }
+    const d=await api('/api/robots?q='+encodeURIComponent(v)+'&limit=8');
+    const robots=(d.items||[]).slice(0,6);
+    let brands=[];
+    try{
+      const bl=STATIC_MODE?_staticBrands():(await api('/api/brands'));
+      const ql=v.toLowerCase();
+      brands=(bl||[]).filter(b=>(b.brand+' '+(b.brandZh||'')).toLowerCase().includes(ql)).slice(0,4);
+    }catch(e){}
+    if(!robots.length && !brands.length){ close(); return; }
+    const total=d.total||0;
+    let html='';
+    if(robots.length){
+      html+=`<div class="sug-sec"><span class="sug-label">${LANG==='zh'?'机器人':'Robots'}</span></div>`;
+      html+=robots.map(r=>`<a class="sug" href="detail.html?id=${r.id}">
+        <span class="si">${EMOJI[r.category]||'🤖'}</span>
+        <span class="st"><b>${hl(r.brand+' '+r.model, v)}</b><i>${r.countryInfo?r.countryInfo.flag+' ':''}${catLabel(r.category)}</i></span>
+      </a>`).join('');
+    }
+    if(brands.length){
+      html+=`<div class="sug-sec"><span class="sug-label">${LANG==='zh'?'品牌':'Brands'}</span></div>`;
+      html+=brands.map(b=>`<a class="sug sug-brand" href="catalog.html?brand=${encodeURIComponent(b.brand)}">
+        <span class="si">🏷️</span>
+        <span class="st"><b>${hl(brandName(b), v)}</b><i>${(b.c||b.count||0)} ${LANG==='zh'?'款':'models'}${b.countryInfo?(' · '+(LANG==='zh'?(b.countryInfo.zh||b.countryInfo.en):b.countryInfo.en)):''}</i></span>
+      </a>`).join('');
+    }
+    html+=`<a class="sug sug-more" href="catalog.html?q=${encodeURIComponent(v)}">${LANG==='zh'?'查看全部 ':'View all '}${total} ${LANG==='zh'?'个结果':'results'} →</a>`;
+    box.innerHTML=html;
+    box.style.display='block';
+    active=-1;
+  }
+  function links(){ return box.querySelectorAll('a.sug'); }
+  function setActive(i){
+    const ls=links(); if(!ls.length) return;
+    if(active>=0 && ls[active]) ls[active].classList.remove('sug-active');
+    active=i; if(active<0) active=0; if(active>=ls.length) active=ls.length-1;
+    ls[active].classList.add('sug-active'); ls[active].scrollIntoView({block:'nearest'});
+  }
+  function choose(){
+    const ls=links(); const el=active>=0?ls[active]:ls[0];
+    if(el) location.href=el.getAttribute('href');
+  }
+  const onType=debounce(render,200);
+  input.addEventListener('input',onType);
+  input.addEventListener('focus',onType);
+  input.addEventListener('keydown',e=>{
+    if(e.key==='ArrowDown'){ e.preventDefault(); if(box.style.display==='none'||!links().length) render().then(()=>setActive(0)); else setActive(active+1); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); if(links().length) setActive(active-1); }
+    else if(e.key==='Enter'){ if(box.style.display!=='none' && links().length){ e.preventDefault(); choose(); } else if(input.value.trim()){ location.href='catalog.html?q='+encodeURIComponent(input.value.trim()); } }
+    else if(e.key==='Escape'){ close(); }
+  });
+  input.addEventListener('blur',()=>setTimeout(close,180));
+  box.addEventListener('mousedown',e=>e.preventDefault());
+  box.addEventListener('mousemove',e=>{
+    const a=e.target.closest('a.sug'); if(!a) return;
+    const ls=[...links()]; const i=ls.indexOf(a);
+    if(i>=0 && i!==active){ ls.forEach(l=>l.classList.remove('sug-active')); a.classList.add('sug-active'); active=i; }
+  });
 }
 
 /* ---- Header / Footer ---- */

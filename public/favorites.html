@@ -78,6 +78,7 @@ let currentEditTag='';
 let currentEditColor='';   // '' = 全部
 let FAV_ITEMS=[];
 let TAG_SORT='count_desc';  // count_desc | count_asc | name
+let TAG_CREATE_SEL=false;    // 新建标签模式：保存时把标签应用到已选机器人
 
 const escJs = s => String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 const escHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -94,7 +95,7 @@ function decorateFavCards(grid, items){
     const tags=(getFavTags()[r.id]||[]);
     const row=document.createElement('div');
     row.className='fav-tagrow';
-    row.innerHTML = tags.map(tg=>`<span class="ftag" style="--ftag-c:${favTagColor(tg)}" onclick="removeFavTagFromCard('${r.id}','${escJs(tg)}')" title="${t('tag_edit')}">${escHtml(tg)} <b>×</b></span>`).join('')
+    row.innerHTML = tags.map(tg=>`<span class="ftag" style="--ftag-c:${favTagColor(tg)}" onclick="event.stopPropagation();filterFavByTag('${escJs(tg)}')" title="${LANG==='zh'?'点击按此标签筛选':'Filter by this tag'}"><span class="ftag-t">${escHtml(tg)}</span><b onclick="event.stopPropagation();removeFavTagFromCard('${r.id}','${escJs(tg)}')" title="${t('tag_edit')}">×</b></span>`).join('')
       + `<input class="ftag-add" placeholder="${t('tag_add_hint')}" onkeydown="if(event.key==='Enter')addFavTagFromCard('${r.id}',this.value,this)">`;
     card.appendChild(row);
   });
@@ -114,6 +115,9 @@ function removeFavTagFromCard(id,tag){
 /* ---- Tag editor (rename / recolor / delete) ---- */
 function openTagEditor(tag){
   currentEditTag=tag; currentEditColor=favTagColor(tag);
+  TAG_CREATE_SEL=false;
+  const mergeBox=document.querySelector('#tagModal .modal-merge'); if(mergeBox) mergeBox.style.display='';
+  const delBtn=document.querySelector('#tagModal [data-i="tag_delete"]'); if(delBtn) delBtn.style.display='';
   document.getElementById('tagNameInput').value=tag;
   renderTagSwatches();
   const sel=document.getElementById('mergeTarget');
@@ -156,7 +160,24 @@ function mergeTagInto(){
   closeTagEditor(); rerenderFavSections();
   toast(LANG==='zh'?`已将「${from}」合并到「${to}」`:`Merged "${from}" into "${to}"`,'ok');
 }
-function closeTagEditor(){ document.getElementById('tagModal').style.display='none'; }
+function closeTagEditor(){ TAG_CREATE_SEL=false; document.getElementById('tagModal').style.display='none'; }
+// 新建标签：要求先进入选择模式并勾选机器人，然后在弹窗中输入标签名并应用到所选
+function quickCreateTag(){
+  if(!(SEL_MODE && SEL.size>0)){
+    toast(LANG==='zh'?'请先点「选择」并勾选机器人，再新建标签':'Tap "Select", pick robots, then create a tag','err');
+    if(!SEL_MODE) toggleSelectMode();
+    return;
+  }
+  currentEditTag=''; currentEditColor=FAVTAG_DEFAULT_COLOR;
+  document.getElementById('tagNameInput').value='';
+  renderTagSwatches();
+  const mergeBox=document.querySelector('#tagModal .modal-merge'); if(mergeBox) mergeBox.style.display='none';
+  const delBtn=document.querySelector('#tagModal [data-i="tag_delete"]'); if(delBtn) delBtn.style.display='none';
+  TAG_CREATE_SEL=true;
+  document.getElementById('tagModal').style.display='flex';
+  checkTagConflict();
+  setTimeout(()=>{ const i=document.getElementById('tagNameInput'); if(i) i.focus(); },0);
+}
 function setEditColor(c){ currentEditColor=c; renderTagSwatches(); }
 function renderTagSwatches(){
   const box=document.getElementById('tagSwatches');
@@ -168,11 +189,20 @@ function renderTagSwatches(){
 function saveTagEdit(){
   const nv=document.getElementById('tagNameInput').value.trim();
   const old=currentEditTag;
-  const conflict = nv && nv!==old && allFavTags().includes(nv);
-  if(nv && nv!==old){ if(renameFavTag(old,nv)){ if(FAV_TAG_FILTER===old) FAV_TAG_FILTER=nv; } }
-  if(currentEditColor && !conflict) setFavTagColor(nv||old, currentEditColor);
-  closeTagEditor(); rerenderFavSections();
-  if(conflict) toast(LANG==='zh'?`已将「${old}」合并到「${nv}」`:`Merged "${old}" into "${nv}"`,'ok');
+  if(!nv) return;
+  if(old){
+    const conflict = nv!==old && allFavTags().includes(nv);
+    if(nv!==old){ if(renameFavTag(old,nv)){ if(FAV_TAG_FILTER===old) FAV_TAG_FILTER=nv; } }
+    if(currentEditColor && !conflict) setFavTagColor(nv||old, currentEditColor);
+    closeTagEditor(); rerenderFavSections();
+    if(conflict) toast(LANG==='zh'?`已将「${old}」合并到「${nv}」`:`Merged "${old}" into "${nv}"`,'ok');
+  } else {
+    // 新建标签：应用到当前已选机器人
+    if(SEL_MODE && SEL.size>0){ SEL.forEach(id=>addFavTag(id,nv)); }
+    if(currentEditColor) setFavTagColor(nv, currentEditColor);
+    closeTagEditor(); rerenderFavSections();
+    toast(LANG==='zh'?`已新建标签「${nv}」并应用到 ${SEL.size} 款`:`Created "${nv}" on ${SEL.size} items`,'ok');
+  }
 }
 
 function renderFavTagBar(){
@@ -183,7 +213,7 @@ function renderFavTagBar(){
   const sorted=sortTagsByMode(tags,counts,TAG_SORT);
   bar.style.display='flex';
   bar.innerHTML = `<span class="tag-chip ${FAV_TAG_FILTER===''?'on':''}" onclick="filterFavByTag('')" data-i="fav_group_all"></span>`
-    + sorted.map(tg=>`<span class="tag-chip ${FAV_TAG_FILTER===tg?'on':''}" style="--dot-c:${favTagColor(tg)}" onclick="filterFavByTag('${escJs(tg)}')" oncontextmenu="openTagCtx(event,'${escJs(tg)}')"><span class="dot"></span>${escHtml(tg)}<button class="chip-edit" title="${t('tag_edit')}" onclick="event.stopPropagation();openTagEditor('${escJs(tg)}')">✎</button></span>`).join('');
+    + sorted.map(tg=>`<span class="tag-chip ${FAV_TAG_FILTER===tg?'on':''}" style="--dot-c:${favTagColor(tg)}" onclick="filterFavByTag('${escJs(tg)}')" oncontextmenu="openTagCtx(event,'${escJs(tg)}')"><span class="dot"></span>${escHtml(tg)}<span class="chip-n">${counts[tg]||0}</span><button class="chip-edit" title="${t('tag_edit')}" onclick="event.stopPropagation();openTagEditor('${escJs(tg)}')">✎</button></span>`).join('');
   applyI18n();
 }
 
@@ -228,7 +258,7 @@ function renderTagOverview(){
   box.style.display='block';
   const sorted=sortTagsByMode(tags,counts,TAG_SORT);
   const sortLabel=t('tag_sort_'+TAG_SORT);
-  box.innerHTML = `<div class="to-head"><span data-i="tag_overview"></span><span class="to-sub" data-i="tag_overview_sub"></span><button class="to-sort" type="button" title="${t('tag_sort')}" onclick="toggleTagSort()">⇅ ${escHtml(sortLabel)}</button></div>`
+  box.innerHTML = `<div class="to-head"><span data-i="tag_overview"></span><button class="to-new" type="button" title="${LANG==='zh'?'为已选机器人新建标签':'Create a tag for selected'}" onclick="quickCreateTag()">＋ ${LANG==='zh'?'新建标签':'New tag'}</button><span class="to-sub" data-i="tag_overview_sub"></span><button class="to-sort" type="button" title="${t('tag_sort')}" onclick="toggleTagSort()">⇅ ${escHtml(sortLabel)}</button></div>`
     + `<div class="to-list">`
     + sorted.map(tg=>`<div class="to-item ${FAV_TAG_FILTER===tg?'on':''}" style="--dot-c:${favTagColor(tg)}" onclick="filterFavByTag('${escJs(tg)}')" oncontextmenu="openTagCtx(event,'${escJs(tg)}')" title="${escHtml(tg)}">
         <span class="dot"></span>
