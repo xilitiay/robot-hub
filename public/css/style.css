@@ -528,6 +528,53 @@ mark.hlm{background:rgba(37,99,235,.14);color:var(--primary);font-weight:800;pad
 }
 .cmp-table td.cmp-best{background:color-mix(in srgb,var(--green) 13%,var(--surface));position:relative;color:var(--green);font-weight:800}
 .cmp-table td.cmp-best::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--green)}
+
+/* ===== Compare: parameter difference highlight ===== */
+#hlBtn.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.cmp-table tr.row-diff td.rowlabel{color:var(--ink);font-weight:700;
+  box-shadow:1px 0 0 var(--line-2), inset 3px 0 0 var(--primary)}
+.cmp-table tr.row-diff td{background:color-mix(in srgb,var(--primary) 3.5%,var(--surface))}
+.cmp-table tr.row-same td{opacity:.62}
+.cmp-table tr.row-same td.rowlabel{opacity:1;color:var(--muted);font-weight:600}
+/* 行标签徽标 */
+.dbadge{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;
+  margin-right:6px;font-size:11px;font-weight:800;line-height:1;border-radius:5px;vertical-align:1px}
+.dbadge.ne{color:var(--primary);background:color-mix(in srgb,var(--primary) 14%,transparent)}
+.dbadge.eq{color:var(--muted);background:var(--surface-2)}
+.dmeta{margin-top:3px;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.01em}
+/* 单元格：最优 / 最弱 / 差异
+   注意：这些规则必须比上面的 `.cmp-table tr.row-diff td` 行底色特异性更高，
+   否则行底色会盖掉最优值的绿色高亮，故统一带上 tr.crow 限定。 */
+.cmp-table tr.crow td.cmp-best{background:color-mix(in srgb,var(--green) 13%,var(--surface));
+  color:var(--green);font-weight:800}
+.cmp-table tr.crow td.cmp-worst{position:relative;color:var(--muted);
+  background:color-mix(in srgb,var(--red) 5%,var(--surface))}
+.cmp-table tr.crow td.cmp-worst::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:color-mix(in srgb,var(--red) 55%,transparent)}
+.dtag{margin-left:5px;font-size:11.5px;font-weight:800}
+.dtag.best{color:var(--green)}
+.dtag.worst{color:color-mix(in srgb,var(--red) 72%,var(--muted))}
+.cmp-table td .vbar{display:block;height:3px;margin-top:7px;border-radius:2px;min-width:6px;opacity:.85}
+.cmp-table td .vbar.b{background:var(--green)}
+.cmp-table td .vbar.m{background:color-mix(in srgb,var(--primary) 55%,transparent)}
+.cmp-table td .vbar.w{background:color-mix(in srgb,var(--red) 45%,transparent)}
+.cmp-table tr.crow td.cell-diff{background:color-mix(in srgb,var(--primary) 8%,var(--surface))}
+/* 文本分组着色：相同取值同色，便于一眼看出"谁和谁一样" */
+.cmp-table tr.crow td.vg{position:relative;font-weight:600}
+.cmp-table tr.crow td.vg::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.cmp-table tr.crow td.vg-0{background:color-mix(in srgb,#4f46e5 9%,var(--surface))}
+.cmp-table tr.crow td.vg-0::before{background:#4f46e5}
+.cmp-table tr.crow td.vg-1{background:color-mix(in srgb,#0ea5e9 9%,var(--surface))}
+.cmp-table tr.crow td.vg-1::before{background:#0ea5e9}
+.cmp-table tr.crow td.vg-2{background:color-mix(in srgb,#f59e0b 11%,var(--surface))}
+.cmp-table tr.crow td.vg-2::before{background:#f59e0b}
+.cmp-table tr.crow td.vg-3{background:color-mix(in srgb,#a855f7 9%,var(--surface))}
+.cmp-table tr.crow td.vg-3::before{background:#a855f7}
+.cmp-table tr.crow td.vg-4{background:color-mix(in srgb,#14b8a6 10%,var(--surface))}
+.cmp-table tr.crow td.vg-4::before{background:#14b8a6}
+/* 顶部差异统计 */
+.dstat{color:var(--primary);font-weight:700}
+.dstat.eq{color:var(--muted);font-weight:600}
 .cmp-slot{background:repeating-linear-gradient(45deg,var(--surface-2),var(--surface-2) 11px,var(--surface) 11px,var(--surface) 22px);text-align:center}
 .slot-add{display:inline-flex;align-items:center;gap:8px;color:var(--primary);font-weight:700;text-decoration:none;padding:18px 10px}
 .slot-add .plus{font-size:22px;line-height:1}
@@ -688,8 +735,22 @@ mark.hlm{background:rgba(37,99,235,.14);color:var(--primary);font-weight:800;pad
   .cmp-table th.rowlabel{position:static !important}
   .cmp-table .emoji{font-size:26px}
   .cmp-table tr{page-break-inside:avoid;break-inside:avoid}
-  .cmp-best,.cmp-table td.cmp-best{color:#047857 !important;font-weight:800 !important;background:#ecfdf5 !important}
-  .cmp-table td.cmp-best::after{background:#10b981 !important}
+  /* 差异高亮：纸面上只保留轻底色与标记，避免大面积彩块 */
+  .cmp-table tr.row-diff td{background:#f8fafc !important}
+  .cmp-table tr.row-diff td.rowlabel{background:#eef2ff !important;color:#1e293b !important;box-shadow:none !important;border-left:2px solid #6366f1 !important}
+  .cmp-table tr.row-same td{opacity:1 !important;color:#64748b !important}
+  .cmp-table tr.crow td.cell-diff,.cmp-table tr.crow td.vg{background:#f8fafc !important}
+  .cmp-table tr.crow td.vg::before,.cmp-table tr.crow td.cmp-worst::after{display:none !important}
+  /* 最优值必须写在行底色之后且特异性更高，否则绿色高亮会被行底色盖掉 */
+  .cmp-best,.cmp-table tr.crow td.cmp-best{color:#047857 !important;font-weight:800 !important;background:#ecfdf5 !important}
+  .cmp-table tr.crow td.cmp-best::after{background:#10b981 !important}
+  .cmp-table tr.crow td.cmp-worst{background:#fff !important}
+  .dbadge{background:transparent !important;color:#475569 !important}
+  .dbadge.ne{color:#4338ca !important}
+  .dmeta{color:#64748b !important}
+  .cmp-table td .vbar{display:none !important}
+  .dtag.best{color:#047857 !important}
+  .dtag.worst{color:#94a3b8 !important}
   /* ===== 详情页规格书 ===== */
   .container.detail{padding:0 !important}
   .breadcrumb,.detail-actions,.detail-related,.modal-mask{display:none !important}

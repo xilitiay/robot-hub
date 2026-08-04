@@ -18,6 +18,7 @@
     <p class="cmp-sub" id="cmpSub"></p>
   </div>
     <div class="cmp-actions">
+      <button class="btn btn-ghost" id="hlBtn" onclick="toggleDiffHl()" data-i="diff_hl" title="Highlight differing values"></button>
       <button class="btn btn-ghost" id="diffBtn" onclick="toggleDiff()" data-i="diff_only" title="Hide rows where all robots are identical"></button>
       <button class="btn btn-ghost" onclick="copyLink()" data-i="share_link"></button>
       <button class="btn btn-ghost cmp-print-btn" id="printBtn" onclick="printCompare()" style="display:none">🖨 <span data-i="cmp_print"></span></button>
@@ -47,10 +48,30 @@
 <script>
 let CMP_ITEMS=[];
 let DIFF_ONLY = localStorage.getItem('cmp_diff')==='1';
+let DIFF_HL = localStorage.getItem('cmp_hl')!=='0';   // 差异高亮，默认开
 function bestIndex(vals, dir){ // dir 'max' or 'min'
   let bi=-1, bv=null;
   vals.forEach((v,i)=>{ if(v==null||isNaN(v)) return; if(bv===null||(dir==='max'?v>bv:v<bv)){bv=v;bi=i;} });
   return bi;
+}
+function worstIndex(vals, dir){ return bestIndex(vals, dir==='max'?'min':'max'); }
+// 差距文案：绝对差 + 倍数（倍数 >=1.15 才显示，避免噪声）
+function gapText(nums, unit){
+  const vs=nums.filter(v=>v!=null&&!isNaN(v));
+  if(vs.length<2) return '';
+  const mn=Math.min(...vs), mx=Math.max(...vs);
+  if(mx===mn) return '';
+  const d=mx-mn;
+  const dTxt=(d>=100?Math.round(d):Math.round(d*10)/10)+(unit||'');
+  const ratio=(mn>0)?(mx/mn):0;
+  const rTxt=(ratio>=1.15)?(' · '+(Math.round(ratio*10)/10)+'×'):'';
+  return t('diff_gap')+' '+dTxt+rTxt;
+}
+function toggleDiffHl(){
+  DIFF_HL=!DIFF_HL;
+  try{ localStorage.setItem('cmp_hl', DIFF_HL?'1':'0'); }catch(e){}
+  const b=document.getElementById('hlBtn'); if(b) b.classList.toggle('on',DIFF_HL);
+  drawTable();
 }
 function buildRows(){
   return [
@@ -58,12 +79,13 @@ function buildRows(){
     { key:'category', label:t('spec_category'), get:r=>{const c=META.categories.find(x=>x.id===r.category);return c?(LANG==='zh'?c.zh:c.en):r.category;}, csv:true, group:'info' },
     { key:'autonomy', label:t('spec_autonomy'), get:r=>{const a=META.autonomyLevels.find(x=>x.id===r.autonomy);return a?(LANG==='zh'?a.zh:a.en):r.autonomy;}, csv:true, group:'info' },
     { key:'country', label:t('spec_country'), get:r=>r.countryInfo?(LANG==='zh'?r.countryInfo.zh:r.countryInfo.en):'—', group:'info' },
-    { key:'payload', label:t('spec_payload')+' (kg)', get:r=>r.payload, num:'max', group:'spec' },
-    { key:'reach', label:t('spec_reach')+' (mm)', get:r=>r.reach, num:'max', group:'spec' },
-    { key:'dof', label:t('spec_dof'), get:r=>r.dof, num:'max', group:'spec' },
-    { key:'weight', label:t('spec_weight')+' (kg)', get:r=>r.weight, num:'min', group:'spec' },
-    { key:'year', label:t('spec_year'), get:r=>r.year, num:'max', group:'spec' },
-    { key:'price', label:t('spec_price'), get:r=>r.priceText, group:'price' },
+    { key:'payload', label:t('spec_payload')+' (kg)', get:r=>r.payload, num:'max', unit:' kg', group:'spec' },
+    { key:'reach', label:t('spec_reach')+' (mm)', get:r=>r.reach, num:'max', unit:' mm', group:'spec' },
+    { key:'dof', label:t('spec_dof'), get:r=>r.dof, num:'max', unit:'', group:'spec' },
+    { key:'weight', label:t('spec_weight')+' (kg)', get:r=>r.weight, num:'min', unit:' kg', group:'spec' },
+    { key:'year', label:t('spec_year'), get:r=>r.year, num:'max', unit:'', group:'spec' },
+    // 价格显示文案（可能是"询价"），但排名/差距用数值字段 price
+    { key:'price', label:t('spec_price'), get:r=>r.priceText, numGet:r=>r.price, num:'min', unit:'', group:'price' },
     { key:'apps', label:t('applications'), get:r=>(r.apps||[]).join(LANG==='zh'?'、':', '), csv:true, group:'apps' },
   ];
 }
@@ -168,6 +190,26 @@ function drawTable(){
   rows.forEach(row=>{
     const vals=items.map(r=>{ let v=row.get(r); return v==null?'':String(v); });
     row._uniform = vals.length>0 && vals.every(v=>v===vals[0]);
+    // —— 差异分析 ——
+    row._nums=null; row._best=-1; row._worst=-1; row._gap=''; row._grp=null;
+    if(row.num){
+      const g=row.numGet||row.get;
+      const nums=items.map(r=>{ const v=g(r); return (v==null||v===''||isNaN(v))?null:Number(v); });
+      row._nums=nums;
+      const valid=nums.filter(v=>v!=null);
+      // 至少两款有数据且不完全相同才有"最优/最弱"之分（只有一款有数据时不标 ★，避免误导）
+      if(valid.length>1 && Math.min(...valid)!==Math.max(...valid)){
+        row._best=bestIndex(nums,row.num);
+        row._worst=worstIndex(nums,row.num);
+        row._gap=gapText(nums,row.unit);
+      }
+    } else if(!row._uniform && items.length>1){
+      // 文本行：相同取值归为一组，仅当存在重复值时用分组底色区分（全不同则不上色，避免过花）
+      const uniq=[...new Set(vals.filter(v=>v!==''))];
+      if(uniq.length>1 && uniq.length<vals.filter(v=>v!=='').length){
+        row._grp=new Map(uniq.map((v,i)=>[v,i%5]));
+      }
+    }
     let show=true;
     if(!row.alwaysShow){
       const groupMatch = CMP_GROUP==='all' || row.group===CMP_GROUP;
@@ -186,9 +228,42 @@ function drawTable(){
   rows.forEach(row=>{
     if(!row._show) return;
     if(DIFF_ONLY && !row.alwaysShow && row._uniform) return; // 隐藏相同行
-    let best=-1;
-    if(row.num){ best=bestIndex(items.map(r=>row.get(r)),row.num); }
-    h+=`<tr><td class="rowlabel">${row.label}</td>`+items.map((r,i)=>{ let v=row.get(r); if(v==null||v==='')v='—'; return `<td class="${i===best?'cmp-best':''}">${v}${i===best?' ★':''}</td>`; }).join('')+'</tr>';
+    const multi=items.length>1;                 // 单台时无对比对象，一切差异样式都不生效
+    const diff=multi && !row._uniform;
+    const hl=DIFF_HL && diff;
+    const dim=DIFF_HL && multi && !diff;        // 开启高亮时，相同行淡化以突出差异
+    // 行标签：差异/相同徽标 + 数值行的差距提示
+    const badge = (multi && DIFF_HL)
+      ? `<span class="dbadge ${diff?'ne':'eq'}" title="${diff?t('diff_badge_ne'):t('diff_badge_eq')}">${diff?'≠':'='}</span>` : '';
+    const meta = (hl && row._gap) ? `<div class="dmeta">${row._gap}</div>` : '';
+    h+=`<tr class="crow ${hl?'row-diff':(dim?'row-same':'')}"><td class="rowlabel">${badge}${row.label}${meta}</td>`
+      + items.map((r,i)=>{
+          let v=row.get(r); if(v==null||v==='')v='—';
+          const cls=[], extra=[];
+          if(hl){
+            if(row._nums){
+              const n=row._nums[i];
+              if(i===row._best && row._best>=0){ cls.push('cmp-best'); extra.push(`<span class="dtag best" title="${t('diff_best')}">★</span>`); }
+              else if(i===row._worst && row._worst>=0){ cls.push('cmp-worst'); extra.push(`<span class="dtag worst" title="${t('diff_worst')}">▽</span>`); }
+              // 相对量级条：长度 = 该值的"优势度"（dir=min 时反向）
+              if(n!=null){
+                const valid=row._nums.filter(x=>x!=null);
+                const mn=Math.min(...valid), mx=Math.max(...valid);
+                if(mx>mn){
+                  const ratio = row.num==='max' ? (n-mn)/(mx-mn) : (mx-n)/(mx-mn);
+                  const w=Math.round(6+94*ratio);
+                  const tone = i===row._best?'b' : (i===row._worst?'w':'m');
+                  extra.push(`<i class="vbar ${tone}" style="width:${w}%"></i>`);
+                }
+              }
+            } else if(row._grp && row._grp.has(String(row.get(r)))){
+              cls.push('vg vg-'+row._grp.get(String(row.get(r))));
+            } else if(diff){
+              cls.push('cell-diff');
+            }
+          }
+          return `<td class="${cls.join(' ')}">${v}${extra.join('')}</td>`;
+        }).join('')+'</tr>';
   });
   // 剩余空位占位，引导继续添加
   const slots=Math.max(0,CMP_MAX-items.length);
@@ -198,10 +273,19 @@ function drawTable(){
   h+='</table></div></div>';
   wrap.innerHTML=h;
   applyI18n();
-  // 参数计数
+  // 参数计数 + 差异统计
   const shown=rows.filter(r=>r._show).length;
+  const diffN=rows.filter(r=>!r._uniform).length;
   const cnt=document.getElementById('cmpRowCount');
-  if(cnt) cnt.textContent = LANG==='zh' ? `显示 ${shown} / ${rows.length} 个参数` : `${shown} / ${rows.length} params`;
+  if(cnt){
+    let txt = LANG==='zh' ? `显示 ${shown} / ${rows.length} 个参数` : `${shown} / ${rows.length} params`;
+    if(items.length>1){
+      txt += ' · ' + (diffN
+        ? `<b class="dstat">${t('diff_stat').replace('{d}',diffN).replace('{n}',rows.length)}</b>`
+        : `<span class="dstat eq">${t('diff_none')}</span>`);
+    }
+    cnt.innerHTML=txt;
+  }
 }
 // 参数搜索
 function applyCmpFilter(){
@@ -331,6 +415,7 @@ async function init(){
   mergeFromUrl();
   renderChrome('compare'); await loadMeta(); applyI18n(); renderTray();
   const b=document.getElementById('diffBtn'); if(b) b.classList.toggle('on',DIFF_ONLY);
+  const hb=document.getElementById('hlBtn'); if(hb) hb.classList.toggle('on',DIFF_HL);
   restoreCmpFilterUI();
   render();
   document.addEventListener('langchange',render);
