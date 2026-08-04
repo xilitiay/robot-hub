@@ -48,7 +48,8 @@
           </div>
           <div>
             <span data-i="sort_by" style="font-size:13.5px;color:var(--muted);margin-right:6px"></span>
-            <select id="sort" onchange="state.sort=this.value;load(true);syncUrl()">
+            <select id="sort" onchange="onSortChange(this.value)">
+              <option value="relevance" data-i="sort_relevance"></option>
               <option value="featured" data-i="sort_featured"></option>
               <option value="year" data-i="sort_year"></option>
               <option value="payload" data-i="sort_payload"></option>
@@ -72,7 +73,7 @@ const params=new URLSearchParams(location.search);
 const _ub=params.get('brand');
 const state={ category:params.get('category')||'', brands:(_ub?_ub.split(',').filter(Boolean):[]), country:params.get('country')||'',
   autonomy:params.get('autonomy')||'', q:params.get('q')||'', featured:params.get('featured')||'',
-  sort:params.get('sort')||'featured', page:1, limit:24,
+  sort:params.get('sort')|| (params.get('q') ? 'relevance' : 'featured'), page:1, limit:24,
   view:localStorage.getItem('cat_view')||'grid', brandQ:'' };
 let BRANDS=[];      // 品牌列表（含计数），init 时拉取一次
 let ALL=[];         // 已加载机器人（无限滚动累加）
@@ -113,7 +114,7 @@ function setBrand(b){
   state.page=1; buildFilters(); load(true); syncUrl();
 }
 function setF(k,v){ state[k]=v; state.page=1; buildFilters(); load(true); syncUrl(); }
-function resetFilters(){ Object.assign(state,{category:'',brands:[],country:'',autonomy:'',q:'',featured:'',page:1,brandQ:''}); const cs=document.getElementById('catSearch'); if(cs)cs.value=''; const cc=document.getElementById('catSearchClear'); if(cc)cc.style.display='none'; buildFilters(); load(true); syncUrl(); }
+function resetFilters(){ Object.assign(state,{category:'',brands:[],country:'',autonomy:'',q:'',featured:'',page:1,brandQ:''}); const cs=document.getElementById('catSearch'); if(cs)cs.value=''; const cc=document.getElementById('catSearchClear'); if(cc)cc.style.display='none'; syncSortOptions(); buildFilters(); load(true); syncUrl(); }
 
 /* ---- Collapsible filters (mobile) ---- */
 function toggleFiltersPanel(){
@@ -141,12 +142,25 @@ function renderActiveFilters(){
 }
 
 let _catSearchT=null;
+let sortTouched = !!params.get('sort');   // 用户是否手动指定过排序（URL 带 sort 也算）
+function onSortChange(v){ sortTouched=true; state.sort=v; state.page=1; load(true); syncUrl(); }
+// 「相关性」仅在有关键词时可用；无词时自动回落到精选优先
+function syncSortOptions(){
+  const sel=document.getElementById('sort'); if(!sel) return;
+  const rel=sel.querySelector('option[value="relevance"]'); if(!rel) return;
+  const on=!!state.q;
+  rel.disabled=!on;
+  rel.style.display=on?'':'none';
+  if(!on && state.sort==='relevance') state.sort='featured';
+  if(on && !sortTouched && state.sort==='featured') state.sort='relevance';
+  sel.value=state.sort;
+}
 function onCatSearch(v){
   const cc=document.getElementById('catSearchClear'); if(cc) cc.style.display = v? 'block':'none';
   clearTimeout(_catSearchT);
-  _catSearchT=setTimeout(()=>{ state.q=v.trim(); state.page=1; load(true); syncUrl(); }, 280);
+  _catSearchT=setTimeout(()=>{ state.q=v.trim(); state.page=1; syncSortOptions(); load(true); syncUrl(); }, 280);
 }
-function clearCatSearch(){ const cs=document.getElementById('catSearch'); if(cs)cs.value=''; state.q=''; const cc=document.getElementById('catSearchClear'); if(cc)cc.style.display='none'; state.page=1; load(true); syncUrl(); }
+function clearCatSearch(){ const cs=document.getElementById('catSearch'); if(cs)cs.value=''; state.q=''; const cc=document.getElementById('catSearchClear'); if(cc)cc.style.display='none'; state.page=1; syncSortOptions(); load(true); syncUrl(); }
 function syncUrl(){
   try{
     const qs=new URLSearchParams();
@@ -208,6 +222,7 @@ function toggleGlobalList(){ try{ if(getSel().size>0) toggleSelList('all'); }cat
 function togglePageList(){ try{ if(getSel().size>0) toggleSelList('page'); }catch(e){} }
 function renderItems(){
   const grid=document.getElementById('grid');
+  try{ setHighlightQuery(state.q||''); }catch(e){}   // 让卡片渲染时高亮命中关键词
   if(!ALL.length){ grid.innerHTML=''; return; }
   grid.className='robot-grid'+(state.view==='list'?' list':'');
   grid.innerHTML=state.view==='list'?ALL.map(robotListRow).join(''):ALL.map(robotCard).join('');
@@ -228,7 +243,9 @@ async function load(reset){
   if(reset) ALL=data.items; else ALL=ALL.concat(data.items);
   document.getElementById('cnt').textContent=data.total;
   const bt=state.brands.length? (state.brands.length+' '+(LANG==='zh'?'个品牌':'brands')+' · ') : '';
-  document.getElementById('catSub').textContent=bt+(state.q?('“'+state.q+'”'):'');
+  let sub=bt+(state.q?('“'+state.q+'”'):'');
+  if(state.q && state.sort==='relevance') sub += ' · '+t('res_sorted_rel');
+  document.getElementById('catSub').textContent=sub;
   const ch=document.getElementById('catHero');
   if(state.category){ const c=META.categories.find(x=>x.id===state.category);
     if(c){ ch.className='cat-hero cat-'+state.category; ch.style.display='flex';
@@ -262,6 +279,7 @@ function setupObserver(){
 async function init(){
   renderChrome('catalog'); await loadMeta();
   BRANDS=await api('/api/brands');
+  syncSortOptions();
   document.getElementById('sort').value=state.sort;
   updateViewBtns();
   applyI18n(); renderTray(); buildFilters();

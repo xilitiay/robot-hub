@@ -478,6 +478,19 @@ body.selecting .rcard.sel{border-color:var(--primary);box-shadow:0 0 0 1px var(-
 .sug-active{background:var(--surface-2);outline:2px solid var(--primary);outline-offset:-2px}
 .sug mark{background:transparent;color:var(--primary);font-weight:800;padding:0}
 
+/* ===== Search result highlight (cards & list rows) ===== */
+mark.hlm{background:rgba(37,99,235,.14);color:var(--primary);font-weight:800;padding:0 2px;border-radius:4px}
+[data-theme="dark"] mark.hlm{background:rgba(96,165,250,.22);color:#93c5fd}
+.rcard.hlq h3 mark.hlm,.lrow.hlq .lname mark.hlm{background:rgba(37,99,235,.16)}
+.hl-snip{font-size:12.5px;line-height:1.5;color:var(--muted);margin:-2px 0 6px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lrow .hl-snip{margin:3px 0 0;-webkit-line-clamp:1}
+.mk-badge{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:700;letter-spacing:.02em;
+  color:var(--primary);background:rgba(37,99,235,.10);border:1px solid rgba(37,99,235,.22);
+  padding:1px 6px;border-radius:6px;vertical-align:1px}
+[data-theme="dark"] .mk-badge{color:#93c5fd;background:rgba(96,165,250,.14);border-color:rgba(96,165,250,.28)}
+#sort option:disabled{color:var(--muted)}
+
 /* ===== Category hero (catalog) ===== */
 .cat-hero{display:flex;align-items:center;gap:18px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px 24px;margin-bottom:22px}
 .cat-hero .ico{width:56px;height:56px;border-radius:14px;display:grid;place-items:center;font-size:30px;background:color-mix(in srgb,var(--c,#4f46e5) 14%,#fff);flex:none}

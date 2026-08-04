@@ -62,6 +62,39 @@ function apiMeta(res) {
     stats: { total, brandCount, catCounts, countryCounts, categoryCount: categories.length } });
 }
 
+// 1~2 个 ASCII 字符视为短词（与前端 _isShortTok 一致）
+function isShortTok(s) { return /^[\x20-\x7e]{1,2}$/.test(s); }
+
+// 相关性打分（与前端 app.js relevanceScore 保持一致的权重口径）
+function relevanceScoreRow(r, q) {
+  const toks = String(q || '').trim().toLowerCase().split(/\s+/).filter(Boolean).slice(0, 6);
+  if (!toks.length) return 0;
+  const model = (r.model || '').toLowerCase(), brand = (r.brand || '').toLowerCase(), bzh = (r.brandZh || '').toLowerCase();
+  const full = (brand + ' ' + model).trim();
+  const desc = ((r.descEn || '') + ' ' + (r.descZh || '')).toLowerCase();
+  const apps = String(r.apps || '').toLowerCase();
+  let sc = 0;
+  for (const s of toks) {
+    let hit = 0;
+    if (model === s || full === s) hit = 120;
+    else if (model.startsWith(s)) hit = 95;
+    else if (brand.startsWith(s) || (bzh && bzh.startsWith(s))) hit = 85;
+    else if (full.startsWith(s)) hit = 80;
+    else if (model.includes(s)) hit = 60;
+    else if (brand.includes(s) || (bzh && bzh.includes(s))) hit = 50;
+    else if (isShortTok(s)) hit = 0;
+    else if (apps.includes(s)) hit = 22;
+    else if (desc.includes(s)) hit = 14;
+    sc += hit;
+  }
+  if (!sc) return 0;
+  if (toks.length > 1) sc += 10;
+  if (r.featured) sc += 8;
+  if (r.year) sc += Math.max(0, Math.min(6, (r.year - 2015) * 0.6));
+  sc += Math.min(6, (r.views || 0) / 60);
+  return sc;
+}
+
 function apiRobots(res, q) {
   const where = [], args = [];
   if (q.category) { where.push('category = ?'); args.push(q.category); }
@@ -74,9 +107,18 @@ function apiRobots(res, q) {
   if (q.autonomy) { where.push('autonomy = ?'); args.push(q.autonomy); }
   if (q.featured) { where.push('featured = 1'); }
   if (q.q) {
-    const t = '%' + String(q.q).toLowerCase() + '%';
-    where.push('(LOWER(brand) LIKE ? OR LOWER(brandZh) LIKE ? OR LOWER(model) LIKE ? OR LOWER(descEn) LIKE ? OR LOWER(descZh) LIKE ?)');
-    args.push(t, t, t, t, t);
+    // 多词 AND；1~2 个 ASCII 字符的短词只查品牌/型号，避免被简介子串大量误命中
+    const toks = String(q.q).trim().toLowerCase().split(/\s+/).filter(Boolean).slice(0, 6);
+    for (const s of toks) {
+      const t = '%' + s + '%';
+      if (isShortTok(s)) {
+        where.push('(LOWER(brand) LIKE ? OR LOWER(brandZh) LIKE ? OR LOWER(model) LIKE ?)');
+        args.push(t, t, t);
+      } else {
+        where.push('(LOWER(brand) LIKE ? OR LOWER(brandZh) LIKE ? OR LOWER(model) LIKE ? OR LOWER(descEn) LIKE ? OR LOWER(descZh) LIKE ? OR LOWER(apps) LIKE ?)');
+        args.push(t, t, t, t, t, t);
+      }
+    }
   }
   const wsql = where.length ? 'WHERE ' + where.join(' AND ') : '';
   let order = 'ORDER BY featured DESC, year DESC';
@@ -90,8 +132,19 @@ function apiRobots(res, q) {
   const page = Math.max(1, parseInt(q.page) || 1);
   const limit = Math.min(500, Math.max(1, parseInt(q.limit) || 24));
   const offset = (page - 1) * limit;
-  const rows = db.prepare(`SELECT * FROM robots ${wsql} ${order} LIMIT ? OFFSET ?`)
-    .all(...args, limit, offset);
+  let rows;
+  if (q.sort === 'relevance' && q.q) {
+    // 相关性排序：SQL 难以表达权重，取全部命中行后在 JS 里打分再分页
+    const all = db.prepare(`SELECT * FROM robots ${wsql}`).all(...args);
+    const sc = new Map(all.map(r => [r, relevanceScoreRow(r, q.q)]));
+    all.sort((a, b) => (sc.get(b) - sc.get(a))
+      || ((b.featured ? 1 : 0) - (a.featured ? 1 : 0))
+      || ((b.year || 0) - (a.year || 0)));
+    rows = all.slice(offset, offset + limit);
+  } else {
+    rows = db.prepare(`SELECT * FROM robots ${wsql} ${order} LIMIT ? OFFSET ?`)
+      .all(...args, limit, offset);
+  }
   send(res, 200, { items: rows.map(parseRobot), total, page,
     pages: Math.ceil(total / limit), limit });
 }

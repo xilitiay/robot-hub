@@ -11,7 +11,8 @@ const I18N = {
     featured_title:'Featured Robots', featured_sub:'Hand-picked flagship models across categories',
     latest_title:'Latest Additions', latest_sub:'Newest models in the database',
     filters:'Filters', f_category:'Category', f_brand:'Brand', f_country:'Country', f_autonomy:'Autonomy', reset:'Reset filters',
-    sort_by:'Sort by', sort_featured:'Featured', sort_year:'Newest', sort_payload:'Payload', sort_price:'Price', sort_views:'Popular', sort_name:'Name', sort_models:'Model count', sort_country:'Country', group_by:'Group by', group_letter:'By letter', group_country:'By country', search_robots:'Search robots by brand or model…', brand_search:'Search brands…', all_categories:'All categories', all_countries:'All countries', search_rfq:'Search leads by name, company, email…',
+    sort_by:'Sort by', sort_relevance:'Best match', sort_featured:'Featured', sort_year:'Newest', sort_payload:'Payload', sort_price:'Price', sort_views:'Popular', sort_name:'Name', sort_models:'Model count', sort_country:'Country',
+    res_for:'results for', res_sorted_rel:'sorted by best match', res_match_name:'name match', res_match_desc:'description match', res_match_app:'application match', group_by:'Group by', group_letter:'By letter', group_country:'By country', search_robots:'Search robots by brand or model…', brand_search:'Search brands…', all_categories:'All categories', all_countries:'All countries', search_rfq:'Search leads by name, company, email…',
     rfq_status:'Status', status_pending:'Pending', status_done:'Processed', mark_done:'Mark processed', mark_pending:'Mark pending', filter_status:'Status', all_status:'All statuses', prev:'Prev', next:'Next', per_page:'Per page', page_info:'Page {p} of {n}', export_csv:'Export CSV', exp_robots:'Export robots', exp_rfq:'Export RFQ', exp_brands:'Export brands',
     theme_light:'Light', theme_dark:'Dark', search_ph:'Search robots, brands or models…',
     results:'results', all:'All',
@@ -44,7 +45,8 @@ const I18N = {
     featured_title:'精选机器人', featured_sub:'跨类目精选旗舰型号',
     latest_title:'最新收录', latest_sub:'数据库中的最新型号',
     filters:'筛选', f_category:'类目', f_brand:'品牌', f_country:'国家/地区', f_autonomy:'自主度', reset:'重置筛选',
-    sort_by:'排序', sort_featured:'精选优先', sort_year:'最新', sort_payload:'负载', sort_price:'价格', sort_views:'热门', sort_name:'名称', sort_models:'型号数', sort_country:'国家/地区', group_by:'分组', group_letter:'按字母', group_country:'按国家', search_robots:'按品牌或型号搜索…', brand_search:'搜索品牌…', all_categories:'全部分类', all_countries:'全部国家', search_rfq:'按姓名/公司/邮箱搜索询盘…',
+    sort_by:'排序', sort_relevance:'相关性', sort_featured:'精选优先', sort_year:'最新', sort_payload:'负载', sort_price:'价格', sort_views:'热门', sort_name:'名称', sort_models:'型号数', sort_country:'国家/地区',
+    res_for:'个结果', res_sorted_rel:'按相关性排序', res_match_name:'名称匹配', res_match_desc:'简介匹配', res_match_app:'应用匹配', group_by:'分组', group_letter:'按字母', group_country:'按国家', search_robots:'按品牌或型号搜索…', brand_search:'搜索品牌…', all_categories:'全部分类', all_countries:'全部国家', search_rfq:'按姓名/公司/邮箱搜索询盘…',
     rfq_status:'状态', status_pending:'待处理', status_done:'已处理', mark_done:'标记已处理', mark_pending:'标记待处理', filter_status:'状态', all_status:'全部状态', prev:'上一页', next:'下一页', per_page:'每页', page_info:'第 {p} / {n} 页', export_csv:'导出 CSV', exp_robots:'导出机器人', exp_rfq:'导出询盘', exp_brands:'导出品牌',
     theme_light:'浅色', theme_dark:'深色', search_ph:'搜索机器人、品牌或型号…',
     results:'个结果', all:'全部',
@@ -207,18 +209,32 @@ function staticApi(path, opts){
     if (q.country) arr = arr.filter(r => r.country === q.country);
     if (q.autonomy) arr = arr.filter(r => r.autonomy === q.autonomy);
     if (q.featured) arr = arr.filter(r => r.featured);
-    if (q.q) { const s = String(q.q).toLowerCase(); arr = arr.filter(r => (r.brand+' '+r.model+' '+(r.brandZh||'')+' '+(r.descEn||'')).toLowerCase().includes(s)); }
+    if (q.q) {
+      const toks = String(q.q).trim().toLowerCase().split(/\s+/).filter(Boolean).slice(0, 6);
+      if (toks.length) arr = arr.filter(r => {
+        const name = (r.brand+' '+r.model+' '+(r.brandZh||'')).toLowerCase();
+        const wide = (name+' '+(r.descEn||'')+' '+(r.descZh||'')+' '+((r.apps||[]).join(' '))).toLowerCase();
+        return toks.every(s => (_isShortTok(s) ? name : wide).includes(s));   // 多词 AND；短词只查名称
+      });
+    }
     const total = arr.length;
     const sort = q.sort || '';
-    arr.sort((a, b) => {
-      if (sort === 'payload') return (b.payload||0) - (a.payload||0);
-      if (sort === 'year') return (b.year||0) - (a.year||0);
-      if (sort === 'price') return (a.price||1e12) - (b.price||1e12);
-      if (sort === 'name') return (a.brand + a.model).localeCompare(b.brand + b.model);
-      if (sort === 'views') return (b.views||0) - (a.views||0);
-      if (!!b.featured !== !!a.featured) return (b.featured?1:0) - (a.featured?1:0);
-      return (b.year||0) - (a.year||0);
-    });
+    if (sort === 'relevance' && q.q) {
+      const sc = new Map(arr.map(r => [r, relevanceScore(r, q.q)]));
+      arr.sort((a, b) => (sc.get(b) - sc.get(a))
+        || ((b.featured?1:0) - (a.featured?1:0))
+        || ((b.year||0) - (a.year||0)));
+    } else {
+      arr.sort((a, b) => {
+        if (sort === 'payload') return (b.payload||0) - (a.payload||0);
+        if (sort === 'year') return (b.year||0) - (a.year||0);
+        if (sort === 'price') return (a.price||1e12) - (b.price||1e12);
+        if (sort === 'name') return (a.brand + a.model).localeCompare(b.brand + b.model);
+        if (sort === 'views') return (b.views||0) - (a.views||0);
+        if (!!b.featured !== !!a.featured) return (b.featured?1:0) - (a.featured?1:0);
+        return (b.year||0) - (a.year||0);
+      });
+    }
     const page = parseInt(q.page || '1', 10);
     const limit = parseInt(q.limit || '24', 10);
     const start = (page - 1) * limit;
@@ -709,6 +725,82 @@ function renderTray(){
   });
 }
 
+/* ---- Search keyword highlight + relevance scoring (shared) ---- */
+let HL_Q = '';                       // 当前搜索关键词（结果卡片高亮用；非搜索场景为空）
+function setHighlightQuery(q){ HL_Q = String(q==null?'':q).trim(); }
+function getHighlightQuery(){ return HL_Q; }
+function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _hlTokens(q){
+  return String(q||'').trim().split(/\s+/).filter(Boolean).slice(0,6);
+}
+// 1~2 个 ASCII 字符（如 "UR"/"C5"）视为短词：只在品牌/型号里匹配，
+// 否则会被简介中的 "Figure"/"Heurist" 这类子串大量误命中。中文 1~2 字信息量高，不算短词。
+function _isShortTok(s){ return /^[\x20-\x7e]{1,2}$/.test(s); }
+// 把 text 中命中 q（默认当前搜索词）的片段包 <mark>，同时做 HTML 转义
+function highlight(text, q){
+  const s = escHtml(text);
+  const key = (q===undefined ? HL_Q : q);
+  const toks = _hlTokens(key);
+  if(!toks.length) return s;
+  try{
+    const pat = toks.map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).sort((a,b)=>b.length-a.length).join('|');
+    return s.replace(new RegExp('('+pat+')','ig'), '<mark class="hlm">$1</mark>');
+  }catch(e){ return s; }
+}
+// 相关性打分：完全匹配 > 型号前缀 > 品牌前缀 > 包含 > 简介/应用命中；同分再看精选/年份/热度
+function relevanceScore(r, q){
+  const toks = _hlTokens(q).map(w=>w.toLowerCase());
+  if(!toks.length) return 0;
+  const model=(r.model||'').toLowerCase(), brand=(r.brand||'').toLowerCase(), bzh=(r.brandZh||'').toLowerCase();
+  const full=(brand+' '+model).trim();
+  const desc=((r.descEn||'')+' '+(r.descZh||'')).toLowerCase();
+  const apps=((r.apps||[]).join(' ')).toLowerCase();
+  let sc=0;
+  toks.forEach(s=>{
+    let hit=0;
+    if(model===s || full===s) hit=120;
+    else if(model.startsWith(s)) hit=95;
+    else if(brand.startsWith(s) || (bzh && bzh.startsWith(s))) hit=85;
+    else if(full.startsWith(s)) hit=80;
+    else if(model.includes(s)) hit=60;
+    else if(brand.includes(s) || (bzh && bzh.includes(s))) hit=50;
+    else if(_isShortTok(s)) hit=0;               // 短词不吃简介/应用的分
+    else if(apps.includes(s)) hit=22;
+    else if(desc.includes(s)) hit=14;
+    sc += hit;
+  });
+  if(!sc) return 0;
+  if(toks.length>1) sc += 10;                                    // 多词全部命中的轻微加成
+  if(r.featured) sc += 8;
+  if(r.year) sc += Math.max(0, Math.min(6, (r.year-2015)*0.6));  // 新品轻微加权
+  sc += Math.min(6, (r.views||0)/60);                            // 热度轻微加权
+  return sc;
+}
+// 命中来源标签：名称 / 简介 / 应用
+function matchKind(r, q){
+  const toks=_hlTokens(q).map(w=>w.toLowerCase()); if(!toks.length) return '';
+  const name=((r.brand||'')+' '+(r.model||'')+' '+(r.brandZh||'')).toLowerCase();
+  if(toks.some(s=>name.includes(s))) return 'name';
+  const wide=toks.filter(s=>!_isShortTok(s));
+  if(wide.some(s=>((r.apps||[]).join(' ')).toLowerCase().includes(s))) return 'app';
+  if(wide.some(s=>(((r.descEn||'')+' '+(r.descZh||'')).toLowerCase()).includes(s))) return 'desc';
+  return '';
+}
+// 命中简介时截取上下文片段（名称已命中则不展示，避免噪声）
+function matchSnippet(r, q){
+  const key = (q===undefined ? HL_Q : q);
+  const toks=_hlTokens(key).filter(s=>!_isShortTok(s)); if(!toks.length) return '';
+  if(matchKind(r, key)==='name') return '';
+  const desc = (LANG==='zh' ? (r.descZh||r.descEn) : (r.descEn||r.descZh)) || '';
+  if(!desc) return '';
+  const low=desc.toLowerCase();
+  let i=-1, hit='';
+  for(const s of toks){ const p=low.indexOf(s.toLowerCase()); if(p>=0 && (i<0||p<i)){ i=p; hit=s; } }
+  if(i<0) return '';
+  const start=Math.max(0, i-28), end=Math.min(desc.length, i+hit.length+56);
+  return (start>0?'…':'')+desc.slice(start,end).trim()+(end<desc.length?'…':'');
+}
+
 /* ---- Robot card ---- */
 function brandInitials(brand){
   if(!brand) return '?';
@@ -726,7 +818,9 @@ function robotCard(r){
   const autoLabel=(META?.autonomyLevels||[]).find(a=>a.id===r.autonomy);
   const catLabel=(META?.categories||[]).find(c=>c.id===r.category);
   const sel=getSel().has(r.id);
-  return `<div class="rcard cat-${r.category}${sel?' sel':''}" data-id="${r.id}">
+  const snip=matchSnippet(r);
+  const mk=HL_Q?matchKind(r,HL_Q):'';
+  return `<div class="rcard cat-${r.category}${sel?' sel':''}${HL_Q?' hlq':''}" data-id="${r.id}">
     <button type="button" class="sel-btn" data-id="${r.id}" onclick="toggleCardSel('${r.id}')" title="${LANG==='zh'?'选择':'Select'}"><span class="check">✓</span></button>
     <button type="button" class="fav-btn ${fav?'on':''}" data-id="${r.id}" onclick="toggleFav('${r.id}')" aria-label="${t('fav')}" title="${t('fav')}">${fav?'★':'☆'}</button>
     <a class="thumb" href="detail.html?id=${r.id}">
@@ -740,8 +834,9 @@ function robotCard(r){
         <span class="tag cat">${catLabel?(LANG==='zh'?catLabel.zh:catLabel.en):r.category}</span>
         <span class="tag auto">${autoLabel?(LANG==='zh'?autoLabel.zh:autoLabel.en):r.autonomy}</span>
       </div>
-      <div class="brand">${LANG==='zh'?(r.brandZh||r.brand):r.brand}</div>
-      <h3><a href="detail.html?id=${r.id}">${r.model}</a></h3>
+      <div class="brand">${highlight(LANG==='zh'?(r.brandZh||r.brand):r.brand)}${mk&&mk!=='name'?`<span class="mk-badge">${mk==='app'?t('res_match_app'):t('res_match_desc')}</span>`:''}</div>
+      <h3><a href="detail.html?id=${r.id}">${highlight(r.model)}</a></h3>
+      ${snip?`<div class="hl-snip">${highlight(snip)}</div>`:''}
       <div class="specs">${specs.map(s=>`<span class="spec">${s}</span>`).join('')}</div>
       <div class="foot">
         <span class="price">${r.priceText||'—'}</span>
@@ -763,11 +858,13 @@ function robotListRow(r){
   const autoLabel=(META?.autonomyLevels||[]).find(a=>a.id===r.autonomy);
   const catLabel=(META?.categories||[]).find(c=>c.id===r.category);
   const sel=getSel().has(r.id);
-  return `<div class="lrow cat-${r.category}${sel?' sel':''}" data-id="${r.id}">
+  const _lsnip=matchSnippet(r);
+  return `<div class="lrow cat-${r.category}${sel?' sel':''}${HL_Q?' hlq':''}" data-id="${r.id}">
     <a class="lthumb" href="detail.html?id=${r.id}"><span class="emoji">${EMOJI[r.category]||'🤖'}</span>${r.featured?`<span class="feat">★</span>`:''}</a>
     <div class="linfo">
       <div class="ltags"><span class="tag cat">${catLabel?(LANG==='zh'?catLabel.zh:catLabel.en):r.category}</span><span class="tag auto">${autoLabel?(LANG==='zh'?autoLabel.zh:autoLabel.en):r.autonomy}</span>${r.countryInfo?`<span class="lflag">${r.countryInfo.flag}</span>`:''}</div>
-      <div class="lname"><b>${LANG==='zh'?(r.brandZh||r.brand):r.brand}</b> ${r.model}</div>
+      <div class="lname"><b>${highlight(LANG==='zh'?(r.brandZh||r.brand):r.brand)}</b> ${highlight(r.model)}</div>
+      ${_lsnip?`<div class="hl-snip">${highlight(_lsnip)}</div>`:''}
       <div class="lspecs">${specs.join(' · ')}</div>
     </div>
     <div class="lprice">${r.priceText||'—'}</div>
