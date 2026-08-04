@@ -77,7 +77,7 @@ async function render(){
   document.getElementById('root').innerHTML=`
     <div class="breadcrumb"><a href="./">RobotHub</a> / <a href="catalog.html?category=${r.category}">${LANG==='zh'?cat.zh:cat.en}</a> / ${r.model}</div>
     <div class="detail-top cat-${r.category}">
-      <div class="detail-media"><div class="grid-deco"></div><span class="wm">${brandInitials(r.brand)}</span><span class="emoji">${EMOJI[r.category]}</span>${r.featured?`<span class="feat" style="top:16px;left:16px">★ ${LANG==='zh'?'精选':'FEATURED'}</span>`:''}</div>
+      <div class="detail-media"><div class="grid-deco"></div>${r.image?`<img class="hero-img" src="${r.image}" alt="${escHtml(r.brand+' '+r.model)}" onerror="onImgErr(this,'${r.category}')">`:''}<span class="wm">${brandInitials(r.brand)}</span><span class="emoji">${EMOJI[r.category]}</span>${r.featured?`<span class="feat" style="top:16px;left:16px">★ ${LANG==='zh'?'精选':'FEATURED'}</span>`:''}</div>
       <div class="detail-info">
         <div class="tags"><span class="tag cat">${LANG==='zh'?cat.zh:cat.en}</span><span class="tag auto">${LANG==='zh'?auto.zh:auto.en}</span></div>
         <div class="sub">${LANG==='zh'?(r.brandZh||r.brand):r.brand} ${cc?('· '+cc.flag+' '+(LANG==='zh'?cc.zh:cc.en)):''}</div>
@@ -105,6 +105,12 @@ async function render(){
           <a class="btn btn-ghost" href="catalog.html?category=${r.category}" data-i="back"></a>
         </div>
       </div>
+    </div>
+    <div class="detail-body">
+      ${r.overviewEn||r.overviewZh?`<section class="db-sec"><h3>${t('detail_overview')}</h3><p>${(LANG==='zh'?(r.overviewZh||r.overviewEn):(r.overviewEn||r.overviewZh))||''}</p></section>`:''}
+      ${r.highlights&&r.highlights.length?`<section class="db-sec"><h3>${t('detail_highlights')}</h3><ul class="hl-list">${r.highlights.map(h=>`<li>${LANG==='zh'?(h.zh||h.en):(h.en||h.zh)}</li>`).join('')}</ul></section>`:''}
+      ${r.extraSpecs&&r.extraSpecs.length?`<section class="db-sec"><h3>${t('detail_more_specs')}</h3><table class="spec-table">${r.extraSpecs.map(s=>{const lab=LANG==='zh'?(s.l.zh||s.l.en):(s.l.en||s.l.zh); return `<tr><td>${lab}</td><td>${s.v}</td></tr>`;}).join('')}</table></section>`:''}
+      ${r.applicationsEn||r.applicationsZh?`<section class="db-sec"><h3>${t('detail_applications')}</h3><p>${(LANG==='zh'?(r.applicationsZh||r.applicationsEn):(r.applicationsEn||r.applicationsZh))||''}</p></section>`:''}
     </div>
     <div class="section detail-related" style="padding:44px 0 0">
       <div class="section-head"><h2 data-i="related"></h2>${d.related.length?`<button class="btn btn-ghost btn-sm" id="relSelToggle" type="button" onclick="toggleRelSelect()" data-i="sel"></button>`:''}</div>

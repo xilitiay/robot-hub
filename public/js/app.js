@@ -31,6 +31,7 @@ const I18N = {
     admin_title:'Admin Console', admin_sub:'Manage the robot database & view RFQ enquiries',
     admin_robots:'Robots', admin_rfq:'RFQ Enquiries', add_robot:'+ Add Robot', edit:'Edit', del:'Delete',
     admin_login:'Enter admin token to manage data', token:'Admin token', login:'Unlock',
+    detail_overview:'Overview', detail_highlights:'Key Highlights', detail_more_specs:'More Specifications', detail_applications:'Applications',
     empty_title:'No robots found', empty_sub:'Try adjusting your filters or search.',
     custom_title:'Don\'t see what you need?', custom_sub:'Spec a robot to your exact requirements. We match you with verified manufacturers.',
     foot_about:'RobotHub is the definitive global directory of robots — discover, compare and source robots from every major brand and category.',
@@ -58,6 +59,7 @@ const I18N = {
     compare:'对比', compare_now:'立即对比', clear:'清空', request_quote:'询价', view_detail:'查看详情',
     spec_payload:'负载', spec_reach:'臂展', spec_dof:'自由度', spec_weight:'重量', spec_year:'年份', spec_speed:'速度', spec_country:'产地', spec_autonomy:'自主度', spec_category:'类目', spec_quickview:'规格速览', spec_brand:'品牌', spec_price:'价格',
     applications:'应用场景', related:'相关机器人', back:'返回',
+    detail_overview:'产品概述', detail_highlights:'核心亮点', detail_more_specs:'更多参数', detail_applications:'应用场景',
     rfq_title:'发起询价', rfq_sub:'直接向供应商发送需求。无需下单，零佣金。',
     rfq_name:'您的姓名', rfq_company:'公司', rfq_email:'邮箱', rfq_phone:'电话', rfq_msg:'留言', submit:'提交', cancel:'取消', rfq_ok:'询价已发送！供应商将与您联系。',
     cmp_title:'机器人对比', cmp_empty:'尚未选择机器人。请从产品库中添加机器人进行对比。', cmp_export:'导出 CSV', share_link:'复制链接', copied:'链接已复制', diff_only:'只看差异', cmp_add:'添加机器人',
@@ -77,6 +79,16 @@ const I18N = {
 let LANG = localStorage.getItem('lang') || 'zh';
 const t = (k) => (I18N[LANG] && I18N[LANG][k]) || (I18N.en[k]) || k;
 const EMOJI = { industrial:'🦾', cobot:'🤝', amr:'🛞', humanoid:'🧍', quadruped:'🐕', medical:'🏥', service:'🛎️', consumer:'🏠', agricultural:'🌾', special:'🚁', logistics:'📦' };
+// per-category accent color (used for placeholder fallback when a robot has no photo)
+const CAT_COLORS = { industrial:'#4f46e5', cobot:'#0ea5e9', amr:'#10b981', humanoid:'#f59e0b', quadruped:'#8b5cf6', medical:'#ef4444', service:'#14b8a6', consumer:'#ec4899', agricultural:'#84cc16', special:'#6366f1', logistics:'#f97316' };
+// data-URI SVG placeholder (category emoji on accent gradient) — used as <img> fallback
+function catPlaceholder(cat){
+  const e=EMOJI[cat]||'🤖'; const c=CAT_COLORS[cat]||'#4f46e5';
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c}"/><stop offset="1" stop-color="#0f172a"/></linearGradient></defs><rect width="480" height="360" fill="url(#g)"/><text x="240" y="210" font-size="150" text-anchor="middle" dominant-baseline="middle">${e}</text></svg>`;
+  return 'data:image/svg+xml,'+encodeURIComponent(svg);
+}
+// hide broken image and swap to category placeholder
+function onImgErr(el,cat){ el.onerror=null; el.src=catPlaceholder(cat); el.classList.add('img-ph'); }
 
 let META = null;
 const STATIC_MODE = !!window.ROBOTHUB_STATIC;   // set by static-bundle.js in the static build
@@ -828,6 +840,7 @@ function robotCard(r){
     <button type="button" class="sel-btn" data-id="${r.id}" onclick="toggleCardSel('${r.id}')" title="${LANG==='zh'?'选择':'Select'}"><span class="check">✓</span></button>
     <button type="button" class="fav-btn ${fav?'on':''}" data-id="${r.id}" onclick="toggleFav('${r.id}')" aria-label="${t('fav')}" title="${t('fav')}">${fav?'★':'☆'}</button>
     <a class="thumb" href="detail.html?id=${r.id}">
+      ${r.image?`<img class="thumb-img" src="${r.image}" alt="${escHtml(r.model)}" loading="lazy" onerror="onImgErr(this,'${r.category}')">`:''}
       <span class="watermark">${brandInitials(r.brand)}</span>
       <span class="emoji">${EMOJI[r.category]||'🤖'}</span>
       ${r.featured?`<span class="feat">★ ${LANG==='zh'?'精选':'FEATURED'}</span>`:''}
@@ -864,7 +877,7 @@ function robotListRow(r){
   const sel=getSel().has(r.id);
   const _lsnip=matchSnippet(r);
   return `<div class="lrow cat-${r.category}${sel?' sel':''}${HL_Q?' hlq':''}" data-id="${r.id}">
-    <a class="lthumb" href="detail.html?id=${r.id}"><span class="emoji">${EMOJI[r.category]||'🤖'}</span>${r.featured?`<span class="feat">★</span>`:''}</a>
+    <a class="lthumb" href="detail.html?id=${r.id}">${r.image?`<img class="lthumb-img" src="${r.image}" alt="${escHtml(r.model)}" loading="lazy" onerror="onImgErr(this,'${r.category}')">`:''}<span class="emoji">${EMOJI[r.category]||'🤖'}</span>${r.featured?`<span class="feat">★</span>`:''}</a>
     <div class="linfo">
       <div class="ltags"><span class="tag cat">${catLabel?(LANG==='zh'?catLabel.zh:catLabel.en):r.category}</span><span class="tag auto">${autoLabel?(LANG==='zh'?autoLabel.zh:autoLabel.en):r.autonomy}</span>${r.countryInfo?`<span class="lflag">${r.countryInfo.flag}</span>`:''}</div>
       <div class="lname"><b>${highlight(LANG==='zh'?(r.brandZh||r.brand):r.brand)}</b> ${highlight(r.model)}</div>
