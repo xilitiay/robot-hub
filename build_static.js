@@ -19,7 +19,7 @@ for (const r of robots.concat(robotsExtra)) {
 const robotsOut = list.map((r, i) => ({
   ...r,
   apps: r.apps || [],
-  featured: i % 7 === 0,
+  featured: !!(r.featured || (r.image && (r.overviewEn || r.overviewZh))),
   views: 0,
   countryInfo: countries[r.country] || null
 }));
